@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/cn'
 import type { ProseBlockView } from '@shared/types/prose-block'
-import { DIALOG_CONTENT_FORM_CLASS } from '@/design-system'
+import { DIALOG_CONTENT_FORM_CLASS, DIALOG_SCROLL_SHELL_CLASS } from '@/design-system'
 
 /**
  * 「恢复默认」二次确认文案：必须指名当前 Agent，不能读起来像全局操作——按钮长在这个 Agent 的
@@ -45,8 +45,8 @@ export function ProseBlockDetailBody({
   const isMissing = view.status === 'missing'
 
   return (
-    <div className="min-w-0">
-      <DialogHeader className="border-b border-border px-6 pb-5 pt-6 text-left">
+    <div className="flex min-h-0 min-w-0 flex-col">
+      <DialogHeader className="shrink-0 border-b border-border px-6 pb-5 pt-6 text-left">
         <DialogTitle className="text-lg leading-tight">{view.title}</DialogTitle>
         {view.hint ? (
           <DialogDescription>{view.hint}</DialogDescription>
@@ -55,7 +55,7 @@ export function ProseBlockDetailBody({
         )}
       </DialogHeader>
 
-      <div className="min-w-0 space-y-4 px-6 py-5" data-prose-block-detail-body={view.id}>
+      <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto px-6 py-5" data-prose-block-detail-body={view.id}>
         {isMissing ? (
           <p className="text-sm leading-6 text-muted-foreground">
             这段内容在新版里已经没有了，你之前的调整不再起作用。
@@ -96,7 +96,7 @@ export function ProseBlockDetailBody({
         )}
       </div>
 
-      <DialogFooter className="border-t border-border bg-active/40 px-6 py-4">
+      <DialogFooter className="shrink-0 border-t border-border bg-active/40 px-6 py-4">
         {isMissing ? (
           <>
             <Button type="button" variant="outline" onClick={onCancel}>
@@ -228,7 +228,7 @@ export function AgentProseBlockPanelView({
         }}
       >
         <DialogContent
-          className={DIALOG_CONTENT_FORM_CLASS}
+          className={`${DIALOG_SCROLL_SHELL_CLASS} ${DIALOG_CONTENT_FORM_CLASS}`}
           data-prose-block-detail-dialog={selectedView?.id}
         >
           {selectedView ? (
