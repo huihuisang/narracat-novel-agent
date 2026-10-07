@@ -137,7 +137,7 @@ export function AuthorRequestDetailBody({
           aria-label="要求内容"
           placeholder="比如：少写环境描写，多写对话；每章结尾留一个悬念。"
           onChange={(event) => onDraftChange?.(event.target.value)}
-          className="text-sm leading-7"
+          className="max-h-[min(50dvh,24rem)] resize-y overflow-y-auto text-sm leading-7"
         />
       </div>
 
