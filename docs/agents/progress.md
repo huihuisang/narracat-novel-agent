@@ -7,6 +7,8 @@
 **2026-10-07（长文本编辑弹窗修复）**：共享多行输入框限制为窗口高度的一半且不超过 384px，超出内容在框内滚动；写手人设、作者要求和粘贴参考片段的弹窗限制高度并让正文区滚动，保存按钮固定可见。
 - 验证：typecheck、check:design、build 和全量测试 3848 条通过；隔离的真实 Electron 窗口用 160 行文本验证三处入口在 800px / 640px 高度下的输入框滚动、光标末尾编辑和保存按钮可见，并验证人设保存后重新打开、作者要求保存。其余共享输入框同受高度上限保护；正文编辑器、Agent 输入框等专用编辑器已有独立滚动边界。
 - 验证截图：[PR #122 前后对比](https://github.com/yannikzz/narracat-novel-agent/pull/122)。下一步：原仓库 PR 审核与合并；ops:check 仍有 8 处既有文档问题，本次未改动相关内容。Fork 仓库已关闭 GitHub Issues，未创建 issue。
+**2026-10-08（从书学写法支持本地电子书，[Issue #123](https://github.com/yannikzz/narracat-novel-agent/issues/123)）**：本地导入从 TXT 扩展到 EPUB 和可提取文字的 PDF；EPUB 按书内阅读顺序读取正文，PDF 提取文字后沿用现有章节拆分与学习流程。扫描版 PDF 缺少文字时明确提示；文件大小、EPUB 解压量和 PDF 页数均有上限。
+- 验证：typecheck、check:design、check:architecture、build、package 和全量测试 3851 条通过；打包版实际解析 PDF 成功，EPUB / PDF 依赖已确认包含在应用包。已替换 `/Applications/NarraCat.app`，安装版签名与应用内容校验通过，重新打开后窗口正常显示。下一步：在桌面 UI 中实测多本真实电子书的导入效果。
 
 **2026-09-16（撤掉发版收尾 PR：`HIGHEST_SHIPPED_VERSION` 常量改为直接问 GitHub，分支 chore/drop-highest-shipped-constant）**：v0.4.2 发完后产品主人质疑「每次发版后还要一个 PR 抬版本号」不合理，核实后成立，四处不合理：①常量是线上事实的手抄缓存，而发布脚本本来就在查 GitHub；防「忘了抬版本」的机制自己靠「别忘了抬常量」维持，0.3.2 那次就真漏抬过；②收尾 PR 把 `package.json` 写成下一个占位号，等于替下一版提前定了 patch/minor，与 ADR-0038「版本号由人在发版时定」相悖；③两个数必须同步改是陷阱；④它真正防的场景发布脚本已有闸。
 - **改法**：删常量与其单测断言；`release.mjs` 新增 `assertVersionAboveLatestRelease`（`gh release view` 不带 tag 取 latest，严格大于才放行；查不到时放行、交给后面 create 去炸，与重复版本闸同款处置），与既有 `assertVersionNotAlreadyReleased` 并列放在打包前。**两道闸职责不同**：重复闸只拦「这个号发过」，跳着发一个没用过却低于线上的号它放行，而后果是 `releases/latest` 倒退、装了线上版的机器全部掉队——新闸补的正是这个。预检同源改查线上；SKILL / release-checklist / workflow / ADR-0038 同步。
