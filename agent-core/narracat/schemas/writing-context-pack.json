@@ -59,7 +59,7 @@
     },
     "style_directive": {
       "type": "string",
-      "description": "风格指令一段自然语言，由 builder 从叙述声音（bible 数据）与 config.yaml 的 style_profile（web_fast / web_standard / literary）渲染，描述本书的腔调、钩子密度、短句容忍与情绪直给水位。chapter-writer 零分支照此写"
+      "description": "风格指令一段自然语言，由 builder 从叙述声音（bible 数据）渲染，描述本书的腔调与节奏；不追加默认句长要求或 style_profile 档位水位，叙述声音缺失时为空串"
     },
     "persona": {
       "type": "string",

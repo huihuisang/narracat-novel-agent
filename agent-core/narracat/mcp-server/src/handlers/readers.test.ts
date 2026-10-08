@@ -1440,7 +1440,7 @@ describe("novel_build_writing_context_pack", () => {
 
     const directive = pack.style_directive as string;
     expect(directive).toContain("猛文热血");
-    expect(directive).toContain("写法水位");
+    expect(directive).not.toContain("写法水位");
 
     const examples = pack.style_examples as Array<Record<string, unknown>>;
     for (const example of examples) {
@@ -1723,7 +1723,7 @@ describe("novel_build_writing_context_pack", () => {
     expect(result.ok).toBe(true);
     expect(result.word_count_range).toEqual([2400, 3600]);
     expect(result.warnings.some((w) => w.includes("words_per_chapter"))).toBe(true);
-    expect(result.warnings.some((w) => w.includes("style_profile"))).toBe(true);
+    expect(result.warnings.some((w) => w.includes("style_profile"))).toBe(false);
   });
 
   it("config.yaml 原文含 voltage_bestof 行（旧项目残留）时写忽略提示（电压点判优已下线）", async () => {
@@ -2593,8 +2593,8 @@ describe("风格指令正向化（ADR-0024 · 克制类校准翻成正向写法�
     // 3) 拿掉克制后追加正向写法（承接「别滥情、别堆砌」意图）
     expect(directive).toContain("情绪靠画面、动作和细节演出来");
 
-    // 4) 档位水位照常渲染
-    expect(directive).toContain("写法水位");
+    // 4) 不再追加档位默认水位
+    expect(directive).not.toContain("写法水位");
     expect(warnings).toEqual([]);
   });
 
@@ -2610,7 +2610,7 @@ describe("风格指令正向化（ADR-0024 · 克制类校准翻成正向写法�
     expect(directive).not.toContain("情绪靠画面、动作和细节演出来");
   });
 
-  it("renderStyleDirective：句法处方类措辞不透传，节奏意图正向承接", () => {
+  it("renderStyleDirective：句法处方类措辞不透传，不追加默认句长要求", () => {
     // 真机 dogfood 数据（novel-51136a98 叙述声音卡原文）：立项阶段写进卡里的「短句 / 段落实短 /
     // 描写精简」被弱模型当成可执行句长指标顶格执行——实测均句长掉到真人网文的 55-65%、
     // ≥25 字长句只剩真人的 1/3。同 ADR-0024 病理：文学直觉形容词 ≠ 句法处方。
@@ -2634,8 +2634,9 @@ describe("风格指令正向化（ADR-0024 · 克制类校准翻成正向写法�
     expect(directive).toContain("对话占比高");
     expect(directive).toContain("毒舌吐槽流");
     expect(directive).toContain("反差萌");
-    // 3) 追加句长自由的正向承接（对症「别让读者为读懂一句话回头重看」）
-    expect(directive).toContain("句子长短跟着情绪走");
+    // 3) 不追加默认句长要求
+    expect(directive).not.toContain("句子长短跟着情绪走");
+    expect(directive).not.toContain("别让读者为读懂一句话回头重看");
     // 4) 维度名不与内容重复（删词后「节奏」+「快节奏」会撞成「节奏快节奏」）
     expect(directive).not.toContain("节奏快节奏");
     expect(directive).toContain("快节奏");
@@ -2657,11 +2658,28 @@ describe("风格指令正向化（ADR-0024 · 克制类校准翻成正向写法�
     expect(directive).toContain("情绪靠画面、动作和细节演出来");
   });
 
-  it("STYLE_PROFILES：web_fast 档位文案不含句长处方（句长归本书声音，不归档位）", () => {
-    const directive = renderStyleDirective(null, "web_fast", []);
-    for (const t of ["句子短", "段落短"]) expect(directive).not.toContain(t);
-    // 档位仍表达「快」——靠钩子密度与场景切换速度，不靠规定句长
-    expect(directive).toContain("钩子");
+  it.each(["web_fast", "web_standard", "literary", "unknown", null])(
+    "renderStyleDirective：档位 %s 不追加默认文风或回退警告",
+    (profile) => {
+      const voice = new Map<string, string>([["archetype", "谐趣吐槽"]]);
+      const warnings: string[] = [];
+      expect(renderStyleDirective(voice, profile, warnings)).toBe("本书叙述声音是「谐趣吐槽」。");
+      expect(warnings).toEqual([]);
+    },
+  );
+
+  it.each(["web_fast", "web_standard", "literary", "unknown", null])(
+    "renderStyleDirective：声音缺失时档位 %s 不补默认文风",
+    (profile) => {
+      const warnings: string[] = [];
+      expect(renderStyleDirective(null, profile, warnings)).toBe("");
+      expect(warnings).toEqual(["bible/premise.md 未找到叙述声音数据，风格指令为空"]);
+    },
+  );
+
+  it("renderStyleDirective：仅有句长关键词时不补默认要求", () => {
+    const voice = new Map<string, string>([["style_keywords", "短句、简练"]]);
+    expect(renderStyleDirective(voice, "web_standard", [])).toBe("");
   });
 
   it("renderStyleDirective：ornamentation/digression 自由文本里的克制词同样被过滤", () => {

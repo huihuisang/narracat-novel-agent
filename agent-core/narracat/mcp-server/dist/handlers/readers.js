@@ -1484,13 +1484,6 @@ async function readWorldRules(projectRoot) {
         .trim();
     return meaningful.length > 0 ? body : null;
 }
-const STYLE_PROFILES = {
-    // 「快」由钩子密度与场景切换速度表达，不由句长表达：档位一旦写「句子短」，
-    // 就成了系统替所有 web_fast 书下的句法处方，与本书声音叠加后把句长压到读不懂
-    web_fast: "钩子排布要密，场景快进快出不拖，情绪直接给到位，爽点不憋着",
-    web_standard: "钩子稳定出现，长短句相间，情绪外显、该热就热，场景推进顺滑不拖",
-    literary: "钩子可以舒缓，句式从容，情绪更多藏在动作与细节里，允许停留与余味",
-};
 // 克制类校准词典（ADR-0024）：作者按文学直觉填入「克制/留白…」时，渲染出口翻译成正向写法，
 // 不透传进风格指令——弱模型会把重复的克制信号误读为「写冷、写碎、不写情绪」。
 // 立项卡数据态不变（作者意图是 canon），正向化只发生在喂写手的这道出口。
@@ -1516,8 +1509,6 @@ const PROSODY_TERMS = [
 const PROSODY_SORTED = [...PROSODY_TERMS].sort((a, b) => b.length - a.length);
 const PROSODY_TEST_RE = new RegExp(PROSODY_SORTED.join("|"));
 const PROSODY_STRIP_RE = new RegExp(PROSODY_SORTED.join("|"), "g");
-// 拿掉句长处方后，承接「读起来要顺、要快」正当意图的正向写法
-const POSITIVE_PROSODY = "句子长短跟着情绪走，该短就短、该展开就展开，别让读者为读懂一句话回头重看。";
 /** 小句丢弃后清理悬空分隔符：只清软分隔符，保留作者破折号「——」不被折断 */
 function joinClauses(parts) {
     return parts
@@ -1559,7 +1550,7 @@ export function positivizeNarratorFreeText(text) {
 }
 /**
  * 句长处方正向化：命中小句里就地删掉处方词——删完仍有实义的保留（「短句快节奏」→「快节奏」），
- * 只剩处方本身的整小句丢弃（「段落实短」/「描写精简」）。正当意图由 POSITIVE_PROSODY 承接。
+ * 只剩处方本身的整小句丢弃（「段落实短」/「描写精简」），不追加默认句长要求。
  * 返回 [cleaned, droppedProsody]。导出供单测。
  */
 export function positivizeProsody(text) {
@@ -1586,12 +1577,12 @@ export function positivizeProsody(text) {
  */
 function positivizeVoiceText(text) {
     const [afterRestraint, droppedRestraint] = positivizeNarratorFreeText(text);
-    const [afterProsody, droppedProsody] = positivizeProsody(afterRestraint);
-    return { text: afterProsody, droppedRestraint, droppedProsody };
+    const [afterProsody] = positivizeProsody(afterRestraint);
+    return { text: afterProsody, droppedRestraint };
 }
 /**
  * 风格关键词（顿号/逗号分隔表）正向化：丢弃命中校准词的 token，保留正向腔调词。
- * 返回 [cleaned, droppedRestraint, droppedProsody]——两类命中分开报，供出口追加对症的正向句。
+ * 返回 [cleaned, droppedRestraint, droppedProsody]——两类命中分开报，仅克制类追加正向写法。
  */
 export function positivizeStyleKeywords(text) {
     const tokens = text
@@ -1614,19 +1605,16 @@ export function positivizeStyleKeywords(text) {
     }
     return [kept.join("、"), droppedRestraint, droppedProsody];
 }
-/** 风格指令渲染：叙述声音数据 + style_profile 档位 → 一段中文自然语言 */
-export function renderStyleDirective(voice, styleProfile, warnings) {
+/** 风格指令渲染：叙述声音数据 → 一段中文自然语言，不追加档位默认文风。 */
+export function renderStyleDirective(voice, _styleProfile, warnings) {
     const parts = [];
     if (voice) {
         let droppedCalibration = false;
-        let droppedProsody = false;
         const archetype = voice.get("archetype");
         if (archetype) {
             const cleaned = positivizeVoiceText(archetype);
             if (cleaned.droppedRestraint)
                 droppedCalibration = true;
-            if (cleaned.droppedProsody)
-                droppedProsody = true;
             if (cleaned.text)
                 parts.push(`本书叙述声音是「${cleaned.text}」。`);
         }
@@ -1645,8 +1633,6 @@ export function renderStyleDirective(voice, styleProfile, warnings) {
             const cleaned = positivizeVoiceText(raw);
             if (cleaned.droppedRestraint)
                 droppedCalibration = true;
-            if (cleaned.droppedProsody)
-                droppedProsody = true;
             // 维度名已被内容自带时不重复冠上（「节奏」+「快节奏…」→「快节奏…」，不是「节奏快节奏」）
             if (cleaned.text) {
                 const firstClause = cleaned.text.split(/[，。；、]/)[0] ?? "";
@@ -1660,31 +1646,18 @@ export function renderStyleDirective(voice, styleProfile, warnings) {
             parts.push(`${dims.join("，")}。`);
         const rawKeywords = voice.get("style_keywords");
         if (rawKeywords) {
-            const [keywords, droppedR, droppedP] = positivizeStyleKeywords(rawKeywords);
+            const [keywords, droppedR] = positivizeStyleKeywords(rawKeywords);
             if (droppedR)
                 droppedCalibration = true;
-            if (droppedP)
-                droppedProsody = true;
             if (keywords)
                 parts.push(`风格关键词：${keywords}。`);
         }
         if (droppedCalibration)
             parts.push(POSITIVE_CRAFT);
-        if (droppedProsody)
-            parts.push(POSITIVE_PROSODY);
     }
     else {
-        warnings.push("bible/premise.md 未找到叙述声音数据，风格指令按档位默认渲染");
+        warnings.push("bible/premise.md 未找到叙述声音数据，风格指令为空");
     }
-    let profile = styleProfile ?? "web_standard";
-    if (!(profile in STYLE_PROFILES)) {
-        warnings.push(`style_profile "${profile}" 不在档位表内，按 web_standard 渲染`);
-        profile = "web_standard";
-    }
-    if (!styleProfile) {
-        warnings.push("config.yaml 缺 style_profile，按 web_standard 渲染风格指令");
-    }
-    parts.push(`写法水位：${STYLE_PROFILES[profile]}。`);
     return parts.join("");
 }
 /**

@@ -94,17 +94,17 @@ export declare function parseRenderedOutline(text: string): ParsedRenderedOutlin
 export declare function positivizeNarratorFreeText(text: string): [string, boolean];
 /**
  * 句长处方正向化：命中小句里就地删掉处方词——删完仍有实义的保留（「短句快节奏」→「快节奏」），
- * 只剩处方本身的整小句丢弃（「段落实短」/「描写精简」）。正当意图由 POSITIVE_PROSODY 承接。
+ * 只剩处方本身的整小句丢弃（「段落实短」/「描写精简」），不追加默认句长要求。
  * 返回 [cleaned, droppedProsody]。导出供单测。
  */
 export declare function positivizeProsody(text: string): [string, boolean];
 /**
  * 风格关键词（顿号/逗号分隔表）正向化：丢弃命中校准词的 token，保留正向腔调词。
- * 返回 [cleaned, droppedRestraint, droppedProsody]——两类命中分开报，供出口追加对症的正向句。
+ * 返回 [cleaned, droppedRestraint, droppedProsody]——两类命中分开报，仅克制类追加正向写法。
  */
 export declare function positivizeStyleKeywords(text: string): [string, boolean, boolean];
-/** 风格指令渲染：叙述声音数据 + style_profile 档位 → 一段中文自然语言 */
-export declare function renderStyleDirective(voice: Map<string, string> | null, styleProfile: string | null, warnings: string[]): string;
+/** 风格指令渲染：叙述声音数据 → 一段中文自然语言，不追加档位默认文风。 */
+export declare function renderStyleDirective(voice: Map<string, string> | null, _styleProfile: string | null, warnings: string[]): string;
 /** 抽象词占比：cross-chapter-warnings §2 算法（导出供单测） */
 export declare function abstractRatio(text: string): number;
 export declare function novelBuildWritingContextPack(args: Record<string, unknown>, ctx: ToolContext): Promise<unknown>;
