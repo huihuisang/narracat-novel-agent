@@ -48,6 +48,7 @@
 | [0040](0040-current-task-pointer.md) | 当前任务指针——把「下一步」从状态页提升为侧边栏常驻 | Accepted | Current 引导基线；「下一步」是全局常驻单一出口，由遥测漏斗断点（32 建项目 → 9 写章节）驱动。 |
 | [0041](0041-author-owned-prose-polish.md) | 作者自持的正文润色通道（非 Agent 直连大模型） | Accepted | Current 润色边界；定位为不承诺效果的自主权通道（出厂零模板），入库后 App 层追加、引擎零改动，护栏判「改了什么」而非「改了多少」；[0029](0029-two-tier-editing-direct-vs-agent-cascade.md)/[0031](0031-manuscript-editing-save-first-two-tier.md) 框架内的第三种正文写入来源。 |
 | [0046](0046-app-never-deletes-user-files.md) | App 永不删除非自有文件——更新/卸载只清 App 自有文件，交付物必须有上界 | Accepted | Current 数据安全底线；Windows 更新/卸载按白名单只删 App 自有文件 + 旧卸载器之前救出/装完放回；Missing 与 Invalid 项目分立且都无身份、不进 Workbench；卷级提交逐卷 upsert，子 agent 截断即停。编号跳过并行分支占用的 0042–0045。 |
+| [0047](0047-per-book-writer-prompt-sources.md) | 按书控制写手提示词来源 | Accepted | 独立写手提示词页；人设、声音卡与逐条作者要求开关，预览与运行同源，旧任务书失效与完整 HTTP 请求的取证边界。 |
 
 ## Status Vocabulary
 

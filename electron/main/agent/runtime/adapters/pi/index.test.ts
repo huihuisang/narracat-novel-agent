@@ -7,7 +7,7 @@
  */
 import { describe, expect, mock, test } from 'bun:test'
 import { createExtensionRuntime, ExtensionRunner } from '@mariozechner/pi-coding-agent'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { AppConfig } from '@shared/types/config'
@@ -15,6 +15,7 @@ import { DEFAULT_PROVIDER_SETTINGS, POOL_DEFAULT_FIELDS } from '@shared/types/co
 import type { PiRunOptions, RunPiSessionArgs } from './pi-session.ts'
 import type { PiMemoryBridge } from './pi-memory-tools.ts'
 import { MEMORY_TOOL_PREFIX } from './pi-memory-tools.ts'
+import { defaultWriterPromptSettings } from '@shared/types/writer-prompts'
 
 // 子会话 Task 派发（pi-subagent.ts）内部固定 import 真实 runPiSession，真派发会尝试起真会话打
 // 网络——mock 掉整个 pi-session.ts 模块，子会话记忆工具测试用它捕获 buildChildRunOptions 的产出；
@@ -31,6 +32,53 @@ mock.module('./pi-session.ts', () => ({
 }))
 
 const { computeBaselineAllowedRoots, createPiAdapter } = await import('./index.ts')
+
+test('style-only choices filter both dispatched context readers and keep the voice enabled', async () => {
+  const projectPath = await mkdtemp(join(tmpdir(), 'writer-style-dispatch-'))
+  try {
+    await mkdir(join(projectPath, '.narracat/context-packs'), { recursive: true })
+    await writeFile(join(projectPath, '.narracat/writer-prompts.json'), JSON.stringify({ ...defaultWriterPromptSettings(), bookStyleEnabled: false }))
+    const file = join(projectPath, '.narracat/context-packs/ch-001.json')
+    await writeFile(file, JSON.stringify({ persona: 'Keep this voice', style_directive: 'Omit this style', style_examples: ['Omit this sample'], chapter_outline: 'Keep this plot' }))
+    const options = await createPiAdapter().createRunOptions(makeRunConfig({ appRoot: process.cwd(), projectPath, loadNarraCatRuntime: true, allowedTools: ['Read', 'Agent'] })) as PiRunOptions
+    expect(options.systemPromptAppendix).toContain('本书已关闭书级文风')
+    expect(options.systemPromptAppendix).not.toContain('本书已关闭书级声音卡')
+    capturedChildSessionCalls = []
+    await options.customTools.find((tool) => tool.name === 'Task')!.execute('style-tc', { subagent_type: 'narracat:chapter-writer', prompt: 'Write a chapter.' }, undefined, undefined, {} as never)
+    for (const session of [options, capturedChildSessionCalls[0].options]) {
+      const reader = session.customTools.find((tool) => tool.name === 'read')!
+      const result = await reader.execute('read-tc', { path: file }, undefined, undefined, {} as never)
+      const text = result.content.map((part) => part.type === 'text' ? part.text : '').join('')
+      expect(text).toContain('Keep this voice')
+      expect(text).toContain('Keep this plot')
+      expect(text).not.toContain('Omit this style')
+      expect(text).not.toContain('Omit this sample')
+    }
+  } finally {
+    await rm(projectPath, { recursive: true, force: true })
+  }
+})
+
+test('per-book source choices reach dispatched writer sessions and both read tools', async () => {
+  const projectPath = await mkdtemp(join(tmpdir(), 'writer-dispatch-'))
+  const userDataPath = await mkdtemp(join(tmpdir(), 'writer-dispatch-user-'))
+  await mkdir(join(projectPath, '.narracat'), { recursive: true })
+  await writeFile(join(projectPath, '.narracat/writer-prompts.json'), JSON.stringify({ version: 1, writerPersonaEnabled: false, bookPersonaEnabled: false, disabledAuthorRequestIds: ['disabled'], bookPersonaChangedAt: null }))
+  await writeFile(join(userDataPath, 'author-requests.json'), JSON.stringify({ requests: [
+    { id: 'enabled', agentId: 'chapter-writer', text: 'Keep this author request' },
+    { id: 'disabled', agentId: 'chapter-writer', text: 'Omit this author request' },
+  ] }))
+  const options = await createPiAdapter().createRunOptions(makeRunConfig({ appRoot: process.cwd(), userDataPath, projectPath, loadNarraCatRuntime: true, allowedTools: ['Read', 'Agent'] })) as PiRunOptions
+  const task = options.customTools.find((tool) => tool.name === 'Task')!
+  capturedChildSessionCalls = []
+  await task.execute('writer-tc', { subagent_type: 'narracat:chapter-writer', prompt: 'Write a chapter.' }, undefined, undefined, {} as never)
+  const child = capturedChildSessionCalls[0].options
+  expect(child.systemPrompt).toContain('Keep this author request')
+  expect(child.systemPrompt).not.toContain('Omit this author request')
+  expect(child.systemPrompt).not.toContain('你是专业的网络小说作家')
+  expect(options.customTools.some((tool) => tool.name === 'read')).toBe(true)
+  expect(child.customTools.some((tool) => tool.name === 'read')).toBe(true)
+})
 
 const config: AppConfig = {
   ...POOL_DEFAULT_FIELDS,

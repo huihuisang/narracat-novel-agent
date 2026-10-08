@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { AgentPanel } from './AgentPanel'
 import { CapabilityPackPanel } from './CapabilityPackPanel'
+import { WriterPromptPanel } from './WriterPromptPanel'
 import { CharacterChatBoard } from './CharacterChatBoard'
 import { MemoryGraphView } from './MemoryGraphView'
 import { resolveWorkbenchContentSelection, WorkbenchContentView } from './WorkbenchContentView'
@@ -463,6 +464,8 @@ export function WorkbenchStage({
                   <CharacterChatBoard projectPath={project?.path ?? ''} />
                 ) : selectedSectionId === 'packs' ? (
                   <CapabilityPackPanel projectPath={project?.path ?? ''} />
+                ) : selectedSectionId === 'writer-prompts' ? (
+                  <WriterPromptPanel key={project?.path} projectPath={project?.path ?? ''} />
                 ) : selectedSectionId === 'memory-graph' ? (
                   <MemoryGraphView projectPath={project?.path ?? ''} />
                 ) : (

@@ -15,6 +15,7 @@ import {
   MessagesSquare,
   NotebookTabs,
   Package,
+  FileSliders,
   Settings,
   Waypoints,
 } from 'lucide-react'
@@ -526,6 +527,8 @@ export function WorkbenchPrimarySidebar({
                         className="size-4 shrink-0 text-hint-foreground"
                         data-workbench-primary-section-icon="packs"
                       />
+                    ) : section.id === 'writer-prompts' ? (
+                      <FileSliders className="size-4 shrink-0 text-hint-foreground" data-workbench-primary-section-icon="writer-prompts" />
                     ) : section.id === 'memory-graph' ? (
                       <Waypoints
                         className="size-4 shrink-0 text-hint-foreground"

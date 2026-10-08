@@ -85,6 +85,8 @@ export const IPC_CHANNEL_MODULES: Readonly<Record<string, TelemetryModule | null
   'packs:detail': null,
   'packs:local-content': null,
   'novel-packs:get': null,
+  'writer-prompts:get': null,
+  'writer-prompts:set': null,
   'novel-packs:get-receipt': null,
   'novel-packs:get-planning-receipts': null,
 

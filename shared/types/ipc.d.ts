@@ -21,6 +21,7 @@ import type {
 import type { ProseBlockView } from './prose-block'
 import type { TelemetryState } from './telemetry'
 import type { AuthorRequest } from './author-request'
+import type { WriterPromptChange, WriterPromptPreview } from './writer-prompts'
 import type {
   PolishAdoptOutcome,
   PolishAdoptRequest,
@@ -467,6 +468,8 @@ export interface ElectronApi {
   getWizardSnapshot: () => Promise<PackWizardSnapshot | null>
   dismissWizard: () => Promise<PackWizardAck>
   getNovelPacks: (input: { projectPath: string }) => Promise<NovelPacksFile>
+  getWriterPrompts: (input: { projectPath: string }) => Promise<WriterPromptPreview>
+  setWriterPromptSource: (input: { projectPath: string; change: WriterPromptChange }) => Promise<WriterPromptPreview>
   setNovelPacks: (input: { projectPath: string; enabled: NovelPacksEntry[] }) => Promise<NovelPacksFile>
   getChapterCapabilityReceipt: (input: {
     projectPath: string
