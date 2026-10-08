@@ -227,6 +227,26 @@ describe('NarraCat Agent Core 打包白名单', () => {
     expect(shouldBundleAgentCorePath(`${base}/darwin/x64/onnxruntime_binding.node`, target)).toBe(false)
   })
 
+  test('prunes native build sources and preserves licenses and bindings', () => {
+    for (const path of ['better-sqlite3/deps/sqlite3/sqlite3.c', 'better-sqlite3/src/better_sqlite3.cpp', 'koffi/build/koffi/win32_x64/koffi.lib', 'typebox/build/typebox.d.mts', 'typebox/build/typebox.d.cts']) {
+      expect(shouldPruneMcpNodeModuleFile(path)).toBe(true)
+    }
+    for (const path of ['better-sqlite3/build/Release/better_sqlite3.node', 'better-sqlite3/LICENSE', 'koffi/build/koffi/darwin_arm64/koffi.node']) {
+      expect(shouldPruneMcpNodeModuleFile(path)).toBe(false)
+    }
+  })
+
+  test('keeps only target SQLite and Koffi prebuilds on both platforms', () => {
+    for (const platform of ['darwin', 'win32']) {
+      const nativeTarget = resolveNativeTarget(platform)
+      for (const other of ['darwin-arm64', 'darwin-x64', 'win32-x64', 'win32-arm64', 'linux-x64']) {
+        const foreign = other !== `${nativeTarget.platform}-${nativeTarget.arch}`
+        expect(shouldPruneForeignPlatformBinary(`mcp-server/node_modules/better-sqlite3/prebuilds/${other}.node`, nativeTarget)).toBe(foreign)
+        expect(shouldPruneForeignPlatformBinary(`mcp-server/node_modules/koffi/build/koffi/${other.replace('-', '_')}/koffi.node`, nativeTarget)).toBe(foreign)
+      }
+    }
+  })
+
   describe('正向断言：暂存树必须真的留着 darwin/arm64 的 onnxruntime 二进制（防裁剪谓词未来静默失效）', () => {
     const binaryDir = join(
       'mcp-server',

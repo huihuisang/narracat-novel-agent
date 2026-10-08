@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'))
 const appIconSvg = readFileSync('build/icon.svg', 'utf8')
@@ -83,10 +84,85 @@ describe('RC package configuration', () => {
   })
 
   test('packages only built runtime output into app.asar', () => {
-    expect(packageJson.build.files).toEqual(['out/**', '!out/**/*.map'])
+    expect(packageJson.build.files.slice(0, 2)).toEqual(['out/**', '!out/**/*.map'])
     expect(packageJson.build.files).not.toContain('node_modules/**')
     expect(packageJson.build.files).not.toContain('src/**')
     expect(packageJson.build.files).not.toContain('electron/**')
+  })
+
+  test('excludes development payload while preserving runtime files on both targets', () => {
+    const root = resolve('.')
+    const matcherScript = `
+      import { readFileSync } from 'node:fs'
+      import { join } from 'node:path'
+      import { getFileMatchers, getNodeModuleFileMatcher } from 'app-builder-lib/out/fileMatcher.js'
+      const { root, build, platform, paths, scope } = JSON.parse(readFileSync(0, 'utf8'))
+      const matcher = scope === 'app'
+        ? getFileMatchers(build, 'files', root, { defaultSrc: root, globalOutDir: join(root, 'dist'), macroExpander: value => value, customBuildOptions: build[platform] })[0]
+        : getNodeModuleFileMatcher(root, root, value => value, build[platform], {
+          config: build, debugLogger: { isEnabled: false },
+        })
+      const filter = matcher.createFilter()
+      console.log(JSON.stringify(paths.map(path => filter(join(root, path), { isDirectory: () => false }))))
+    `
+    for (const [platform, target] of [['mac', 'darwin-arm64'], ['win', 'win32-x64']]) {
+      const cases = []
+      for (const path of [
+        'node_modules/openai/index.mjs.map',
+        'node_modules/typebox/build/typebox.d.mts',
+        'node_modules/typebox/build/typebox.d.cts',
+        'node_modules/hono/dist/tsconfig.build.tsbuildinfo',
+        'node_modules/better-sqlite3/deps/sqlite3/sqlite3.c',
+        'node_modules/better-sqlite3/src/better_sqlite3.cpp',
+        'node_modules/koffi/build/koffi/win32_x64/koffi.lib',
+      ]) cases.push([path, false])
+      for (const other of ['darwin-arm64', 'darwin-x64', 'win32-x64', 'win32-arm64', 'linux-x64']) {
+        const sqlite = `node_modules/better-sqlite3/prebuilds/${other}.node`
+        const koffi = `node_modules/koffi/build/koffi/${other.replace('-', '_')}/koffi.node`
+        cases.push([sqlite, other === target], [koffi, other === target])
+      }
+      for (const path of [
+        'node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+        'node_modules/keytar/build/Release/keytar.node',
+        'node_modules/pdfjs-dist/legacy/build/pdf.mjs',
+        'node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs',
+        'node_modules/pdfjs-dist/standard_fonts/FoxitSerif.pfb',
+        'node_modules/pdfjs-dist/cmaps/UniGB-UTF16-H.bcmap',
+        'node_modules/openai/LICENSE',
+      ]) cases.push([path, true])
+      const results = JSON.parse(execFileSync('node', ['--input-type=module', '-e', matcherScript], {
+        input: JSON.stringify({ root, build: packageJson.build, platform, paths: cases.map(([path]) => path) }),
+        encoding: 'utf8',
+      }))
+      for (const [index, [path, included]] of cases.entries()) {
+        expect({ platform, path, included: results[index] }).toEqual({ platform, path, included })
+      }
+      const appCases = [
+        ['out/main/index.js', true],
+        ['out/renderer/index.html', true],
+        ['src/assets/brand/mark.webp', false],
+        ['electron/main/index.ts', false],
+        ['docs/design-assets/cover.png', false],
+        ['agent-core/narracat/mcp-server/dist/core.js', false],
+      ]
+      const appResults = JSON.parse(execFileSync('node', ['--input-type=module', '-e', matcherScript], {
+        input: JSON.stringify({ root, build: packageJson.build, platform, scope: 'app', paths: appCases.map(([path]) => path) }),
+        encoding: 'utf8',
+      }))
+      for (const [index, [path, included]] of appCases.entries()) {
+        expect({ platform, path, included: appResults[index] }).toEqual({ platform, path, included })
+      }
+    }
+  })
+
+  test('keeps renderer packages in build dependencies only', () => {
+    for (const name of ['react', 'react-dom', 'lucide-react', 'three', 'react-force-graph-3d', 'framer-motion', 'radix-ui', 'zustand']) {
+      expect(packageJson.dependencies[name]).toBeUndefined()
+      expect(packageJson.devDependencies[name]).toBeDefined()
+    }
+    for (const name of ['@mariozechner/pi-ai', '@mariozechner/pi-coding-agent', 'better-sqlite3', 'keytar', 'pdfjs-dist']) {
+      expect(packageJson.dependencies[name]).toBeDefined()
+    }
   })
 
   test('拆旧刀5：claude-sdk 打包资产全退役（无 SDK unpack、无 headless runtime 资源）', () => {

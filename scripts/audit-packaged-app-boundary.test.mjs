@@ -30,12 +30,11 @@ describe('packaged app.asar boundary audit', () => {
       '/out/renderer/index.html',
       '/node_modules/keytar/package.json',
       '/node_modules/@anthropic-ai/claude-agent-sdk/cli.js',
-      '/node_modules/hono/dist/tsconfig.build.tsbuildinfo',
     ])
 
     expect(report).toEqual({
       ok: true,
-      entryCount: 7,
+      entryCount: 6,
       violations: [],
     })
   })
@@ -81,6 +80,25 @@ describe('packaged app.asar boundary audit', () => {
       path: 'out/main/index.js.map',
       reason: 'renderer/main source maps must not be packaged in app.asar',
     })
+  })
+
+  test('rejects dependency development files and foreign native binaries', () => {
+    const paths = [
+      '/node_modules/openai/index.mjs.map',
+      '/node_modules/typebox/build/typebox.d.mts',
+      '/node_modules/hono/dist/tsconfig.build.tsbuildinfo',
+      '/node_modules/better-sqlite3/deps/sqlite3/sqlite3.c',
+      '/node_modules/better-sqlite3/prebuilds/linux-x64.node',
+      '/node_modules/koffi/build/koffi/win32_x64/koffi.node',
+    ]
+    const report = auditAsarEntries(paths, target)
+    expect(report.ok).toBe(false)
+    expect(report.violations.map(item => item.path)).toEqual(paths.map(path => path.slice(1)))
+    expect(classifyAsarEntry('/node_modules/better-sqlite3/prebuilds/darwin-arm64.node', target).ok).toBe(true)
+    expect(classifyAsarEntry('/node_modules/koffi/build/koffi/darwin_arm64/koffi.node', target).ok).toBe(true)
+    const windows = resolveNativeTarget('win32')
+    expect(classifyAsarEntry('/node_modules/better-sqlite3/prebuilds/win32-x64.node', windows).ok).toBe(true)
+    expect(classifyAsarEntry('/node_modules/better-sqlite3/prebuilds/darwin-arm64.node', windows).ok).toBe(false)
   })
 
   test('rejects staged Agent Core runtime development payloads', () => {

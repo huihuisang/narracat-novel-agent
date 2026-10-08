@@ -112,12 +112,19 @@ export function shouldPruneMcpNodeModuleFile(relPath) {
   if (/^changelog/i.test(base)) return true
   if (base.endsWith('.d.ts.map')) return true
   if (base.endsWith('.map')) return true
-  if (base.endsWith('.d.ts')) return true
+  if (/\.d\.(ts|mts|cts)$/.test(base)) return true
   if (base.endsWith('.ts')) return true
   if (base.endsWith('.tsx')) return true
   if (base.endsWith('.tsbuildinfo')) return true
   if (base.endsWith('.md') && !isLicenseLikeFileName(base)) return true
+  if (shouldPruneNativeBuildFile(relPath)) return true
   return false
+}
+
+export function shouldPruneNativeBuildFile(relPath) {
+  const path = toPosix(relPath)
+  return /(?:^|\/)better-sqlite3\/(?:deps|src)\//.test(path) ||
+    /(?:^|\/)koffi\/build\/koffi\/.*\.(?:lib|exp)$/.test(path)
 }
 
 function getNodeModulePackageRelativeSegments(segments) {
@@ -168,6 +175,16 @@ export function resolveNativeTargetFromArgv(argv = process.argv) {
 
 export function shouldPruneForeignPlatformBinary(relPath, target = resolveNativeTarget()) {
   const segments = toPosix(relPath).split('/').filter(Boolean)
+  const sqliteIndex = segments.indexOf('better-sqlite3')
+  if (sqliteIndex !== -1 && segments[sqliteIndex + 1] === 'prebuilds') {
+    const fileName = segments[sqliteIndex + 2]
+    return !!fileName?.endsWith('.node') && fileName !== `${target.platform}-${target.arch}.node`
+  }
+  const koffiIndex = segments.indexOf('koffi')
+  if (koffiIndex !== -1 && segments[koffiIndex + 1] === 'build' && segments[koffiIndex + 2] === 'koffi') {
+    const binaryTarget = segments[koffiIndex + 3]
+    return !!binaryTarget && binaryTarget !== `${target.platform}_${target.arch}`
+  }
   const packageIndex = segments.indexOf('onnxruntime-node')
   if (packageIndex === -1) return false
 

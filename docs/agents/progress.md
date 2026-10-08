@@ -4,6 +4,9 @@
 
 ## Current Branch
 
+**2026-10-08（桌面包体积清理，[Issue #126](https://github.com/yannikzz/narracat-novel-agent/issues/126)）**：前端构建依赖移入 `devDependencies`；打包排除依赖源码映射、类型声明、构建缓存、SQLite 编译源码及非目标平台的 SQLite / Koffi 二进制。Agent Core 暂存复用原生目标规则，产物审计新增回归拦截；平台 `files` 保留 `out/**` 白名单。
+- 验证：同口径 macOS arm64 产物占用从 795.91 MiB 降至 580.87 MiB（-27.02%）；DMG 从 295.83 MiB 降至 246.17 MiB，ZIP 从 287.91 MiB 降至 240.72 MiB。3874 条测试、类型检查、设计与架构检查、构建、签名打包、产物审计及打包版记忆运行检查通过。独立临时用户目录验证了真实打包版界面、PDF / EPUB 读取、扫描版拒绝和 Pi 会话创建，无渲染错误；未发起模型写作请求。Windows 仅验证裁剪规则，未运行 Windows 产物。`ops:check` 的 8 项既有文档问题已与父提交核对。新包仅签名、未公证，尚未替换安装版；未推送。详见 `memory/package-size-audit.md`。
+
 **2026-10-08（写手提示词推送与本地安装交付）**：功能提交 `f514f5bc` 已推送到 `huihuisang/narracat-novel-agent` 的 `feat/writer-prompt-controls`，基于远端已有电子书导入提交追加，保留原提交历史。重新生成签名本地包并替换 `/Applications/NarraCat.app`，版本 `0.4.3`，旧 App 与产物均已保留。
 - 验证：3869 条测试、类型与设计检查通过；签名完整性、Hardened Runtime、包内资源边界、打包版记忆与向量模型检查、DMG 校验通过。安装内容与新产物一致，101 个小说与设置文件内容核对一致。安装版独立页面、三项开关、完整预览过滤与刷新后持久化实测通过，无渲染错误。`ops:check` 仍有 8 个既有文档问题。本次为本地签名档，未公证。
 

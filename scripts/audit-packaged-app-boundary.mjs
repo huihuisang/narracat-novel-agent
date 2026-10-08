@@ -10,6 +10,7 @@ import {
   shouldPruneForeignPlatformBinary,
   shouldPruneMcpDistFile,
   shouldPruneMcpNodeModuleFile,
+  shouldPruneNativeBuildFile,
 } from './stage-narracat-agent-core.mjs'
 
 const scriptDir = fileURLToPath(new URL('.', import.meta.url))
@@ -175,16 +176,25 @@ function hasForbiddenPathPrefix(entry, prefix) {
   return entry === prefix || entry.startsWith(`${prefix}/`)
 }
 
-export function classifyAsarEntry(entry) {
+export function classifyAsarEntry(entry, target) {
   const normalized = normalizeAsarEntry(entry)
   if (!normalized) return { ok: true, path: normalized }
 
-  if (!normalized.startsWith('node_modules/') && normalized.endsWith('.tsbuildinfo')) {
+  if (normalized.endsWith('.tsbuildinfo')) {
     return { ok: false, path: normalized, reason: 'TypeScript incremental build cache must not be packaged' }
   }
 
   if (normalized.startsWith('out/') && normalized.endsWith('.map')) {
     return { ok: false, path: normalized, reason: 'renderer/main source maps must not be packaged in app.asar' }
+  }
+
+  if (normalized.startsWith('node_modules/')) {
+    if (normalized.endsWith('.map') || /\.d\.(ts|mts|cts)$/.test(normalized) || shouldPruneNativeBuildFile(normalized)) {
+      return { ok: false, path: normalized, reason: 'dependency development file must not be packaged' }
+    }
+    if (target && shouldPruneForeignPlatformBinary(normalized, target)) {
+      return { ok: false, path: normalized, reason: `foreign-platform binary must be pruned (only ${target.platform}/${target.arch} ships)` }
+    }
   }
 
   const forbidden = FORBIDDEN_ASAR_PATHS.find((prefix) => hasForbiddenPathPrefix(normalized, prefix))
@@ -250,10 +260,10 @@ export function classifyPackagedResourceEntry(entry, target = resolveNativeTarge
   return { ok: true, path: normalized }
 }
 
-export function auditAsarEntries(entries) {
+export function auditAsarEntries(entries, target) {
   const violations = []
   for (const entry of entries) {
-    const result = classifyAsarEntry(entry)
+    const result = classifyAsarEntry(entry, target)
     if (!result.ok) violations.push(result)
   }
 
@@ -278,12 +288,12 @@ export function auditPackagedResourceEntries(entries, target = resolveNativeTarg
   }
 }
 
-export function auditPackagedAsar(asarPath) {
+export function auditPackagedAsar(asarPath, target = resolveNativeTarget()) {
   if (!existsSync(asarPath)) {
     throw new Error(`找不到 packaged app.asar：${asarPath}`)
   }
 
-  return auditAsarEntries(listPackage(asarPath, { isPack: false }))
+  return auditAsarEntries(listPackage(asarPath, { isPack: false }), target)
 }
 
 function listDirectoryEntries(root) {
@@ -315,7 +325,7 @@ export function auditPackagedExtraResources(appPath, platform = process.platform
 export async function auditPackagedApp(appPath, platform = process.platform) {
   const layout = resolvePackagedLayout(platform)
   await assertPackagedLocalesPresent(appPath, layout)
-  const asarReport = auditPackagedAsar(join(appPath, layout.resourcesDir, 'app.asar'))
+  const asarReport = auditPackagedAsar(join(appPath, layout.resourcesDir, 'app.asar'), resolveNativeTarget(platform))
   const resourcesReport = auditPackagedExtraResources(appPath, platform)
   const violations = [
     ...asarReport.violations.map((violation) => ({ ...violation, scope: 'app.asar' })),
@@ -335,7 +345,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
   try {
     const report = explicitAsarPath
-      ? auditPackagedAsar(resolvePackagedAsarPath())
+      ? auditPackagedAsar(resolvePackagedAsarPath(), resolveNativeTarget(readPlatformOption(process.argv.slice(2))))
       : await auditPackagedApp(resolvePackagedAppPath(), readPlatformOption(process.argv.slice(2)))
     if (!report.ok) {
       console.error('Packaged app boundary audit failed')

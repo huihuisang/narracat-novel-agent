@@ -43,6 +43,12 @@
         "zh_CN",
         "en"
       ],
+      "files": [
+        "out/**",
+        "!out/**/*.map",
+        "!node_modules/**/better-sqlite3/prebuilds/!(darwin-arm64).node",
+        "!node_modules/**/koffi/build/koffi/!(darwin_arm64)/**"
+      ],
       "target": [
         {
           "target": "dmg",
@@ -67,6 +73,12 @@
       "electronLanguages": [
         "zh-CN",
         "en-US"
+      ],
+      "files": [
+        "out/**",
+        "!out/**/*.map",
+        "!node_modules/**/better-sqlite3/prebuilds/!(win32-x64).node",
+        "!node_modules/**/koffi/build/koffi/!(win32_x64)/**"
       ],
       "target": [
         {
@@ -93,7 +105,12 @@
     },
     "files": [
       "out/**",
-      "!out/**/*.map"
+      "!out/**/*.map",
+      "!node_modules/**/*.map",
+      "!node_modules/**/*.d.{ts,mts,cts}",
+      "!node_modules/**/*.tsbuildinfo",
+      "!node_modules/**/better-sqlite3/{deps,src}/**",
+      "!node_modules/**/koffi/build/koffi/**/*.{lib,exp}"
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**"
@@ -119,31 +136,13 @@
     "@modelcontextprotocol/sdk": "1.29.0",
     "adm-zip": "^0.6.0",
     "better-sqlite3": "^13.0.2",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "electron-updater": "6.8.9",
     "fast-xml-parser": "^5.11.2",
-    "framer-motion": "^12.38.0",
     "keytar": "^7.9.0",
-    "lucide-react": "^1.8.0",
-    "ogl": "^1.0.11",
     "pdfjs-dist": "^6.4.299",
-    "radix-ui": "^1.4.3",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-force-graph-3d": "^1.29.1",
-    "react-markdown": "^10.1.0",
-    "react-resizable-panels": "^2",
-    "react-router": "^7.14.1",
-    "remark-gfm": "^4.0.1",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0",
-    "three": "^0.185.1",
-    "three-spritetext": "^1.10.0",
     "tinyglobby": "^0.2.17",
     "typebox": "1.3.8",
-    "yaml": "^2.8.4",
-    "zustand": "^5.0.12"
+    "yaml": "^2.8.4"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
@@ -157,13 +156,31 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^6.0.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "electron": "^41.2.1",
     "electron-builder": "^26.8.1",
     "electron-vite": "^5.0.0",
+    "framer-motion": "^12.38.0",
     "happy-dom": "^20.10.6",
+    "lucide-react": "^1.8.0",
+    "ogl": "^1.0.11",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-force-graph-3d": "^1.29.1",
+    "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^2",
+    "react-router": "^7.14.1",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.7",
+    "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
+    "three": "^0.185.1",
+    "three-spritetext": "^1.10.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "vite": "^8.0.8"
+    "vite": "^8.0.8",
+    "zustand": "^5.0.12"
   }
 }

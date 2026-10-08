@@ -26,6 +26,23 @@ The packaged directory ships the internal Agent Core's engine resources
 (commands/agents/skills/schemas/MCP server), consumed by the app's pi-based
 agent runtime. It is not a checkout of any upstream repository.
 
+## Dependency Payload
+
+Renderer-only packages belong in `devDependencies`. Vite includes their used
+code in the renderer bundle; shipping their full package trees adds a second
+copy. Keep packages loaded at runtime, including Pi, PDF.js, and native modules,
+in `dependencies`.
+
+The package filters exclude dependency source maps, type declarations, build
+caches, SQLite build sources, and native prebuilds for other platforms. The
+Agent Core stage applies the same native target rules. The package boundary
+audit rejects these files if they reappear.
+
+Platform-specific `files` arrays replace the main app file selection. Each must
+retain the `out/**` allowlist. Dependency exclusions from the global and platform
+arrays are combined by electron-builder. Tests exercise its file matchers for
+both macOS arm64 and Windows x64.
+
 ## Preparation
 
 `bun --no-cache run dev` runs:
