@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import { AgentProseBlockPanel } from './AgentProseBlockPanel'
 import { AuthorRequestPanel } from './AuthorRequestPanel'
@@ -52,7 +52,12 @@ export const NARRACAT_AGENT_PROFILES: NarraCatAgentProfile[] = [
 
 const DEFAULT_AGENT_ID = 'chapter-writer'
 
-export function AgentProfileInspector({ initialAgentId = DEFAULT_AGENT_ID }: { initialAgentId?: string } = {}) {
+export function AgentProfileInspector({ initialAgentId = DEFAULT_AGENT_ID, renderInstructions, onAgentChange, selectionDisabled = false }: {
+  initialAgentId?: string
+  renderInstructions?: (agent: NarraCatAgentProfile) => ReactNode
+  onAgentChange?: (agentId: string) => void
+  selectionDisabled?: boolean
+} = {}) {
   const [selectedAgentId, setSelectedAgentId] = useState(initialAgentId)
   const selectedAgent =
     NARRACAT_AGENT_PROFILES.find((agent) => agent.id === selectedAgentId) ?? NARRACAT_AGENT_PROFILES[0]
@@ -77,11 +82,12 @@ export function AgentProfileInspector({ initialAgentId = DEFAULT_AGENT_ID }: { i
               aria-controls={`agent-profile-panel-${agent.id}`}
               data-agent-profile-tab={agent.id}
               data-active={selected}
+              disabled={selectionDisabled}
               className={cn(
                 'grid min-h-16 min-w-36 flex-1 grid-cols-[2.875rem_minmax(0,1fr)] items-center gap-2.5 rounded-row border border-border bg-surface px-2.5 py-2 text-left text-muted-foreground transition-all duration-200 hover:border-border-strong hover:bg-hover hover:text-foreground active:scale-[0.98]',
                 selected && 'border-border-strong bg-active text-foreground hover:bg-active'
               )}
-              onClick={() => setSelectedAgentId(agent.id)}
+              onClick={() => { if (!selected) { setSelectedAgentId(agent.id); onAgentChange?.(agent.id) } }}
             >
               <img
                 src={agent.imageUrl}
@@ -132,13 +138,15 @@ export function AgentProfileInspector({ initialAgentId = DEFAULT_AGENT_ID }: { i
           </p>
         </div>
 
-        <AgentProseBlockPanel agentId={selectedAgent.id} agentName={selectedAgent.name} />
-
-        <AuthorRequestPanel agentId={selectedAgent.id} />
+        {renderInstructions ? renderInstructions(selectedAgent) : (
+          <>
+            <AgentProseBlockPanel agentId={selectedAgent.id} agentName={selectedAgent.name} />
+            <AuthorRequestPanel agentId={selectedAgent.id} />
+          </>
+        )}
 
         <OfficialSkillSection agentId={selectedAgent.id} />
       </div>
     </section>
   )
 }
-

@@ -71,7 +71,7 @@ describe('workbench navigation model', () => {
       { id: 'settings', title: '设定集', pending: true, defaultTabId: 'bible-premise' },
       { id: 'blueprint', title: '小说大纲', pending: true, defaultTabId: 'master-outline' },
       { id: 'packs', title: '能力包', pending: false, defaultTabId: null },
-      { id: 'writer-prompts', title: '写手提示词', pending: false, defaultTabId: null },
+      { id: 'writer-prompts', title: 'Agents 档案', pending: false, defaultTabId: null },
       { id: 'chat', title: '唠个嗑', pending: false, defaultTabId: null },
       { id: 'memory-graph', title: '记忆星图', pending: false, defaultTabId: null },
     ])
@@ -170,7 +170,7 @@ describe('workbench navigation model', () => {
       { id: 'settings', title: '设定集', pending: true, defaultTabId: 'bible-premise' },
       { id: 'blueprint', title: '小说大纲', pending: false, defaultTabId: 'master-outline' },
       { id: 'packs', title: '能力包', pending: false, defaultTabId: null },
-      { id: 'writer-prompts', title: '写手提示词', pending: false, defaultTabId: null },
+      { id: 'writer-prompts', title: 'Agents 档案', pending: false, defaultTabId: null },
       { id: 'chat', title: '唠个嗑', pending: false, defaultTabId: null },
       { id: 'memory-graph', title: '记忆星图', pending: false, defaultTabId: null },
     ])

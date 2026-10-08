@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { PROSE_BLOCK_ID_RE } from '@shared/lib/prose-blocks'
 import { defaultWriterPromptSettings, isWriterPromptChange, type WriterPromptChange, type WriterPromptSettings } from '@shared/types/writer-prompts'
 import { withJsonFileLock } from '../engine/write-json-atomic'
 
@@ -22,9 +23,10 @@ export async function readWriterPromptSettings(projectPath?: string): Promise<Wr
       && (value.bookStyleEnabled === undefined || typeof value.bookStyleEnabled === 'boolean')
       && (value.bookStyleChangedAt === undefined || value.bookStyleChangedAt === null || (typeof value.bookStyleChangedAt === 'string' && Number.isFinite(Date.parse(value.bookStyleChangedAt))))
       && Array.isArray(value.disabledAuthorRequestIds) && value.disabledAuthorRequestIds.every((id) => typeof id === 'string' && id.trim())
+      && (value.disabledProseBlockIds === undefined || (Array.isArray(value.disabledProseBlockIds) && value.disabledProseBlockIds.every((id) => typeof id === 'string' && PROSE_BLOCK_ID_RE.test(id))))
       && (value.bookPersonaChangedAt === null || (typeof value.bookPersonaChangedAt === 'string' && Number.isFinite(Date.parse(value.bookPersonaChangedAt))))) {
       // Older v1 files retain their choices and keep book style enabled.
-      return { ...value, bookStyleEnabled: value.bookStyleEnabled ?? true, bookStyleChangedAt: value.bookStyleChangedAt ?? null } as unknown as WriterPromptSettings
+      return { ...value, disabledProseBlockIds: value.disabledProseBlockIds ?? [], bookStyleEnabled: value.bookStyleEnabled ?? true, bookStyleChangedAt: value.bookStyleChangedAt ?? null } as unknown as WriterPromptSettings
     }
   }
   throw new Error('本书写手提示词设置格式无效，请检查 writer-prompts.json。')
@@ -35,7 +37,14 @@ export async function updateWriterPromptSettings(projectPath: string, change: Wr
   return withJsonFileLock(settingsPath(projectPath), async (write) => {
     const previous = await readWriterPromptSettings(projectPath)
     const next = { ...previous }
-    if (change.kind === 'writer-persona') next.writerPersonaEnabled = change.enabled
+    if (change.kind === 'writer-persona' || (change.kind === 'agent-persona' && change.id === 'writer-persona')) {
+      next.writerPersonaEnabled = change.enabled
+      next.disabledProseBlockIds = previous.disabledProseBlockIds.filter((id) => id !== 'writer-persona')
+    } else if (change.kind === 'agent-persona') {
+      next.disabledProseBlockIds = change.enabled
+        ? previous.disabledProseBlockIds.filter((id) => id !== change.id)
+        : [...new Set([...previous.disabledProseBlockIds, change.id])]
+    }
     else if (change.kind === 'book-persona') {
       if (previous.bookPersonaEnabled !== change.enabled) {
         next.bookPersonaEnabled = change.enabled

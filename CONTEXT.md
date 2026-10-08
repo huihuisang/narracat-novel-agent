@@ -46,7 +46,8 @@
 - **Agent**：执行小说创作任务的后台能力；在 Agent Core cutover 前通过 Claude Code SDK + NarraCat plugin 运行，cutover 后归 NarraCat Agent Core 所有。
 - **Agent profile / Agent 设定**：定义小说工作流中一个专业角色及其知识边界的配置；它不是一次 Agent run，也不是 Agent action。
 - **Agent memory / 代理持久记忆**：Claude Code 为特定 Agent 保留的项目级操作偏好层，用于稳定用户偏好、项目风格锚点、反复确认的审修倾向和流程 guardrail。它不是 NovelMemory，不是章节事实库，不承载某一章的剧情、旧草稿经验、WCP JSON 或未来大纲事实；写作代理的留存策略见 ADR 0013。
-- **Agent profile inspector / Agent 设定检查器**：查看 Agent profile、能力边界并管理其挂载 Skill（挂载 / 卸载）的应用级界面；它展示面向作者的产品化摘要，不把原始 prompt 作为首屏内容，也不编辑 Agent 的 prompt / tools / model 等出厂能力。它不是单本 Novel project 的配置项。
+- **Agent profile inspector / Agent 设定检查器**：设置中的应用级 Agent 档案，展示五个创作角色的介绍，管理全局人设调整与作者要求，并提供官方能力的只读查看。它不配置模型和工具权限。
+- **Book Agent profiles / 书级 Agent 档案**：工作台中的「Agents 档案」，复用设置的角色切换、立绘与简介，查看当前提示词来源并按书开关各 Agent 的人设和作者要求。声音卡和书级文风是章节写手的独立来源。选择从下一次运行生效，不修改全局原文。
 - **Skill / 技能包**：可挂载到 Agent profile 的领域知识包；它不是用户直接点击执行的 Agent action。Skill 与 Agent 的关系是 **(Skill, Agent) 绑定**——同一个 Skill 对不同 Agent 可呈现为不同类别、或根本不出现。官方 Skill 按与 Agent 的绑定分为内部 / Agent 默认 / 可挂载三类；作者另可挂载用户自定义 Skill。
 - **内部 Skill / Internal skill**：不绑定任何 Agent、仅供命令或主会话内部调用的官方 Skill；不出现在任何 Agent 配置页。
 - **Agent 默认 Skill / Agent default skill**：随某个 Agent 出厂、绑定该 Agent 的官方 Skill；在该 Agent 配置页可见且锁定，作者不可卸载。
@@ -106,7 +107,7 @@
 - **Chapter question / 章节问题**：一章唯一推进或回答的戏剧问题，补齐「全书悬问 → 单元 core_question → 章节问题 → 场景 pressure_point」的概念阶梯。场景的新信息只能作为该问题的进展或代价出现，不得各开独立新线索。它不是 dramatic_focus（后者是该问题的最强呈现时刻），也不限制情绪线的并行呈现。
 - **Judgment sync rule / 判断同步律**：读者可以落后于事实，但不可落后于主角已形成的判断——主角每形成一个可指导行动的判断（推理结论、威胁评估、关联确认），同章内正文必须让读者拿到它。边界判据是**行动依赖**：主角接下来的行动或选择依赖该判断时必须露（此处直白句合法），仅为线索着色时受 Inference overexposure 约束。它不是 Inference overexposure 的对立面而是其对边；叙述者诡计类写法须由叙述者腔调层显式 opt-out，不是默认行为。
 - **Scene-temperature modulation / 场景温度调制**：同一叙述者腔调在不同场景类型、压力强度和高潮位置下呈现不同句式温度与情绪释放方式。它避免把全书级热血、冷叙或急节奏误解为每个场景都必须使用同一种短句、留白或外放策略。
-- **Style directive / 风格指令**：写作上下文包交给写手的、决定这本书「怎么说话」的运行时风格指令，由叙述声音卡与 style_profile 档位渲染而成，承载腔调、节奏与写法水位。契约上它只表达正向写法，不携带「克制／留白／节制抒情／收敛」类校准措辞——这类词会被弱模型误读为惜字如金、不写表情情绪、用句号堆砌伪深意，使正文失去画面感与代入。它不是叙述声音卡本身（那是作者填写的意图来源），也不是 Scene-temperature modulation（后者是同一腔调随场景变化的温度）。
+- **Style directive / 风格指令**：写作上下文包交给写手的、决定这本书「怎么说话」的运行时风格指令，由叙述声音卡渲染而成，承载腔调与节奏；不追加默认句长要求或 style_profile 档位的「写法水位」，声音卡缺失时为空。契约上它只表达正向写法，不携带「克制／留白／节制抒情／收敛」类校准措辞——这类词会被弱模型误读为惜字如金、不写表情情绪、用句号堆砌伪深意，使正文失去画面感与代入。它不是叙述声音卡本身（那是作者填写的意图来源），也不是 Scene-temperature modulation（后者是同一腔调随场景变化的温度）。
 - **网文感 / Web-novel feel**：让网文读者愿意一章章追下去的阅读体验——强代入、画面感、节奏起伏、钩子、情绪带入、期待及时兑现。它是**跨题材**的可读性，按每本书的题材与设定校准；认知流、言情、悬疑、种田同样要有网文感。它**不是「爽文」这一类型**，也不要求每本书靠升级碾压打脸；爽点 / 爽感只是制造网文感的**手段之一**，形态由设定决定（升级碾压 / 认知看透 / 情感甜 / 悬念解谜…）。具体光谱以作者整理的番茄排名作品为校准基准。
 - **Mechanism annotation / 机制注解**：真人范例条目随附的「用了什么技法 + 为什么有效」解释，是范例可迁移性的载体——裸范例几乎无迁移效果。三处范例资产（corpus 语料条目、novel-craft 分册范例、narrator_voice 腔调范例）共用同一数据规范：无机制注解不入库。学习方学的是机制决策，不是范例的原文或句式表面。它不是原文摘录本身，也不是出处标注。
 - **Chapter manuscript generated**：章节正文已生成。它只表示正文产物已经落盘，不等于该章节完成。

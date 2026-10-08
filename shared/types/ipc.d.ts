@@ -468,8 +468,8 @@ export interface ElectronApi {
   getWizardSnapshot: () => Promise<PackWizardSnapshot | null>
   dismissWizard: () => Promise<PackWizardAck>
   getNovelPacks: (input: { projectPath: string }) => Promise<NovelPacksFile>
-  getWriterPrompts: (input: { projectPath: string }) => Promise<WriterPromptPreview>
-  setWriterPromptSource: (input: { projectPath: string; change: WriterPromptChange }) => Promise<WriterPromptPreview>
+  getWriterPrompts: (input: { projectPath: string; agentId?: string }) => Promise<WriterPromptPreview>
+  setWriterPromptSource: (input: { projectPath: string; agentId?: string; change: WriterPromptChange }) => Promise<WriterPromptPreview>
   setNovelPacks: (input: { projectPath: string; enabled: NovelPacksEntry[] }) => Promise<NovelPacksFile>
   getChapterCapabilityReceipt: (input: {
     projectPath: string

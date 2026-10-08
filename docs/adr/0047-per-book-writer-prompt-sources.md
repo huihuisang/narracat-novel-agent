@@ -10,7 +10,7 @@ The chapter writer receives several independent sources: its agent persona, glob
 
 ## Decision
 
-- Add a separate **Writer Prompts** page to the project sidebar. It uses the full content width and does not share the Capability Packs page.
+- Add a separate **Agents Profiles** page to the project sidebar, replacing the Writer Prompts label. Reuse the Settings `AgentProfileInspector` tabs, portraits, introductions, and official skill viewer. Book-specific source inspection and switches replace the global editing sections. Settings keeps its global editing behavior.
 - Store source choices in the app-owned `.narracat/writer-prompts.json`. Defaults retain existing behavior. Each book has separate switches for the writer persona, book voice card, and book style, plus a switch for each global author requirement. New requirements are enabled by default. Older v1 files without style fields keep style enabled.
 - Reuse `assembleAgentSkills` for both the source preview and runtime writer definition. Disabling the persona removes that prose block, including the official fallback. Execution and file rules remain enabled.
 - Display the book voice card and style directive from the most recently generated context pack, with its chapter number. This is a source preview, not a historical HTTP capture or a promise about a future chapter's card selection.
@@ -18,6 +18,8 @@ The chapter writer receives several independent sources: its agent persona, glob
 - Filter disabled book sources through the runtime Read tool before pagination and before they reach either the main session or a child session. The voice switch removes the persona card. The style switch removes the style directive and style examples. Keep source files intact; retain plot data and independently enabled sources.
 - When either book switch changes, record its timestamp. A chapter brief older than the latest timestamp must be regenerated from the current context before use. This also covers interrupted chapter recovery.
 - Capture choices once when building the next run. Saving choices invalidates cached sessions without aborting a run already in progress.
+- Apply per-book persona and author requirement choices to all five built-in agents. Extend the existing v1 file with `disabledProseBlockIds`, defaulting to an empty list. Keep the writer's existing persona choice and disabled requirement ids. Voice and style controls remain specific to the chapter writer.
+- Use the same agent assembler for each profile's source preview and runtime definition. Validate the selected agent and source ownership before saving a switch. Mandatory workflow, file, and tool rules remain present.
 - Invalid settings stop loading and writing. Do not silently restore enabled defaults or overwrite a file that cannot be read.
 
 ## Consequences

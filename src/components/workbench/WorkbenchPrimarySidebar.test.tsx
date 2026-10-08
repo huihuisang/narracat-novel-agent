@@ -245,7 +245,7 @@ describe('WorkbenchPrimarySidebar', () => {
       '设定集待设定',
       '小说大纲待设定',
       '能力包',
-      '写手提示词',
+      'Agents档案',
       '唠个嗑',
       '记忆星图',
     ])
@@ -295,7 +295,7 @@ describe('WorkbenchPrimarySidebar', () => {
       '设定集待设定',
       '小说大纲待设定',
       '能力包',
-      '写手提示词',
+      'Agents档案',
       '唠个嗑',
       '记忆星图',
     ])
@@ -530,7 +530,7 @@ describe('WorkbenchPrimarySidebar', () => {
       '设定集待设定',
       '小说大纲待设定',
       '能力包',
-      '写手提示词',
+      'Agents档案',
       '唠个嗑',
       '记忆星图',
     ])

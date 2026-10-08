@@ -43,7 +43,7 @@ export function getWorkbenchPrimarySections(project: NovelProjectDetail): Workbe
     buildPrimarySection(project, 'settings', '设定集'),
     buildPrimarySection(project, 'blueprint', '小说大纲'),
     buildPrimarySection(project, 'packs', '能力包'),
-    buildPrimarySection(project, 'writer-prompts', '写手提示词'),
+    buildPrimarySection(project, 'writer-prompts', 'Agents 档案'),
     buildPrimarySection(project, 'chat', '唠个嗑'),
     buildPrimarySection(project, 'memory-graph', '记忆星图'),
   ]

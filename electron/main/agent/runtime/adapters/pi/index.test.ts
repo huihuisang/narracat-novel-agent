@@ -7,7 +7,7 @@
  */
 import { describe, expect, mock, test } from 'bun:test'
 import { createExtensionRuntime, ExtensionRunner } from '@mariozechner/pi-coding-agent'
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { AppConfig } from '@shared/types/config'
@@ -16,6 +16,8 @@ import type { PiRunOptions, RunPiSessionArgs } from './pi-session.ts'
 import type { PiMemoryBridge } from './pi-memory-tools.ts'
 import { MEMORY_TOOL_PREFIX } from './pi-memory-tools.ts'
 import { defaultWriterPromptSettings } from '@shared/types/writer-prompts'
+import { parseProseBlocks } from '@shared/lib/prose-blocks'
+import { NARRACAT_ENGINE_AGENT_IDS } from '../../../../engine/agent-core-contract'
 
 // 子会话 Task 派发（pi-subagent.ts）内部固定 import 真实 runPiSession，真派发会尝试起真会话打
 // 网络——mock 掉整个 pi-session.ts 模块，子会话记忆工具测试用它捕获 buildChildRunOptions 的产出；
@@ -32,6 +34,42 @@ mock.module('./pi-session.ts', () => ({
 }))
 
 const { computeBaselineAllowedRoots, createPiAdapter } = await import('./index.ts')
+
+test('each profile applies its per-book persona and requirement switches to dispatched sessions', async () => {
+  const projectPath = await mkdtemp(join(tmpdir(), 'agent-prompts-dispatch-'))
+  const userDataPath = await mkdtemp(join(tmpdir(), 'agent-prompts-user-'))
+  try {
+    const sources = await Promise.all(NARRACAT_ENGINE_AGENT_IDS.map(async (agentId) => {
+      const content = await readFile(join(process.cwd(), `agent-core/narracat/agents/${agentId}.md`), 'utf8')
+      return { agentId, block: parseProseBlocks(content)[0] }
+    }))
+    await mkdir(join(projectPath, '.narracat'))
+    await writeFile(join(projectPath, '.narracat/writer-prompts.json'), JSON.stringify({
+      ...defaultWriterPromptSettings(), writerPersonaEnabled: false,
+      disabledProseBlockIds: sources.filter((item) => item.agentId !== 'chapter-writer').map((item) => item.block.id),
+      disabledAuthorRequestIds: sources.map((item) => `disabled-${item.agentId}`),
+    }))
+    await writeFile(join(userDataPath, 'prose-overrides.json'), JSON.stringify({ version: 1, overrides: Object.fromEntries(sources.map((item) => [item.block.id, { text: `Custom persona ${item.agentId}`, baseText: item.block.body }])) }))
+    await writeFile(join(userDataPath, 'author-requests.json'), JSON.stringify({ requests: sources.flatMap(({ agentId }) => [
+      { id: `enabled-${agentId}`, agentId, text: `Keep request ${agentId}` },
+      { id: `disabled-${agentId}`, agentId, text: `Omit request ${agentId}` },
+    ]) }))
+    const options = await createPiAdapter().createRunOptions(makeRunConfig({ appRoot: process.cwd(), userDataPath, projectPath, loadNarraCatRuntime: true, allowedTools: ['Read', 'Agent'] })) as PiRunOptions
+    const task = options.customTools.find((tool) => tool.name === 'Task')!
+    capturedChildSessionCalls = []
+    for (const { agentId, block } of sources) {
+      await task.execute(`task-${agentId}`, { subagent_type: `narracat:${agentId}`, prompt: 'Run the assigned task.' }, undefined, undefined, {} as never)
+      const child = capturedChildSessionCalls.at(-1)!.options
+      expect(child.systemPrompt).toContain(`Keep request ${agentId}`)
+      expect(child.systemPrompt).not.toContain(`Omit request ${agentId}`)
+      expect(child.systemPrompt).not.toContain(`Custom persona ${agentId}`)
+      expect(child.systemPrompt).not.toContain(block.body)
+      expect(child.systemPrompt.length).toBeGreaterThan(100)
+    }
+  } finally {
+    await Promise.all([rm(projectPath, { recursive: true, force: true }), rm(userDataPath, { recursive: true, force: true })])
+  }
+})
 
 test('style-only choices filter both dispatched context readers and keep the voice enabled', async () => {
   const projectPath = await mkdtemp(join(tmpdir(), 'writer-style-dispatch-'))

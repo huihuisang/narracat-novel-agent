@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { defaultWriterPromptSettings } from '@shared/types/writer-prompts'
 import { readWriterPromptSettings, updateWriterPromptSettings } from './writer-prompts'
-import { resolveWriterPrompt } from '../engine/writer-prompt'
+import { resolveAgentPrompt, resolveWriterPrompt } from '../engine/writer-prompt'
 
 const roots: string[] = []
 async function workspace() {
@@ -17,6 +17,40 @@ afterEach(async () => {
 })
 
 describe('per-book writer prompt sources', () => {
+  test('other agent personas persist independently and preserve legacy writer choices', async () => {
+    const root = await workspace()
+    await updateWriterPromptSettings(root, { kind: 'writer-persona', enabled: false })
+    await updateWriterPromptSettings(root, { kind: 'agent-persona', id: 'world-curator-persona', enabled: false })
+    expect(await readWriterPromptSettings(root)).toMatchObject({ writerPersonaEnabled: false, disabledProseBlockIds: ['world-curator-persona'] })
+    await updateWriterPromptSettings(root, { kind: 'agent-persona', id: 'world-curator-persona', enabled: true })
+    expect(await readWriterPromptSettings(root)).toMatchObject({ writerPersonaEnabled: false, disabledProseBlockIds: [] })
+    await updateWriterPromptSettings(root, { kind: 'agent-persona', id: 'writer-persona', enabled: true })
+    expect((await readWriterPromptSettings(root)).writerPersonaEnabled).toBe(true)
+  })
+
+  test('selected agent previews use the same filtered sources as runtime assembly', async () => {
+    const root = await workspace()
+    const userData = await workspace()
+    const engine = await workspace()
+    await mkdir(join(engine, 'agents'))
+    await writeFile(join(engine, 'agents/world-curator.md'), '---\ndescription: Curator\ntools: Read, Write\n---\n<!-- narracat:prose id="world-curator-persona" title="Curator persona" -->\nOfficial curator persona\n<!-- /narracat:prose -->\nKeep world rules')
+    await writeFile(join(userData, 'prose-overrides.json'), JSON.stringify({ version: 1, overrides: { 'world-curator-persona': { text: 'Custom curator persona', baseText: 'Official curator persona' } } }))
+    await writeFile(join(userData, 'author-requests.json'), JSON.stringify({ requests: [
+      { id: 'a', agentId: 'world-curator', text: 'Keep curator request' },
+      { id: 'b', agentId: 'world-curator', text: 'Disable curator request' },
+      { id: 'c', agentId: 'chapter-writer', text: 'Writer request' },
+    ] }))
+    await updateWriterPromptSettings(root, { kind: 'agent-persona', id: 'world-curator-persona', enabled: false })
+    await updateWriterPromptSettings(root, { kind: 'author-request', id: 'b', enabled: false })
+    const result = await resolveAgentPrompt({ projectPath: root, userDataPath: userData, agentCorePath: engine, agentId: 'world-curator' })
+    expect(result.agentId).toBe('world-curator')
+    expect(result.proseBlocks[0]).toMatchObject({ id: 'world-curator-persona', text: 'Custom curator persona', enabled: false })
+    expect(result.definition.prompt).toContain('Keep world rules')
+    expect(result.definition.prompt).toContain('Keep curator request')
+    for (const text of ['Custom curator persona', 'Official curator persona', 'Disable curator request', 'Writer request']) expect(result.definition.prompt).not.toContain(text)
+    await expect(resolveAgentPrompt({ projectPath: root, agentCorePath: engine, agentId: '../world-curator' })).rejects.toThrow()
+  })
+
   test('missing settings preserve all current sources', async () => {
     expect(await readWriterPromptSettings(await workspace())).toEqual(defaultWriterPromptSettings())
   })

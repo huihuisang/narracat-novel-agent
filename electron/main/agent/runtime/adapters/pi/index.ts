@@ -47,7 +47,7 @@ import { createSubagentEventChannel, createTaskCardTools, createTaskTool } from 
 import { createAskUserQuestionTool, createPiToolGuard, mapSdkToolFaceToPi } from './pi-tool-guard.ts'
 import { createPiToolCallNameNormalizer } from './pi-toolcall-name-normalizer.ts'
 import { readWriterPromptSettings } from '../../../../novel/writer-prompts.ts'
-import { resolveWriterPrompt } from '../../../../engine/writer-prompt.ts'
+import { resolveBookAgentOverrides } from '../../../../engine/writer-prompt.ts'
 import { createWriterContextReadTool } from './pi-writer-context.ts'
 
 /** 与 claude-sdk adapter 的 DEFAULT_MAX_TURNS 对齐；命令路径经 RuntimeRunConfig.maxTurns 覆盖（48-72 档）。 */
@@ -98,11 +98,11 @@ async function buildPiRunOptions(
   const writerSettings = await readWriterPromptSettings(args.loadNarraCatRuntime && face.includeTaskDispatch ? args.projectPath : undefined)
   const filterWriterContext = !writerSettings.bookPersonaEnabled || !writerSettings.bookStyleEnabled
     || writerSettings.bookPersonaChangedAt !== null || writerSettings.bookStyleChangedAt !== null
-  const writerOverride = args.loadNarraCatRuntime && face.includeTaskDispatch && args.projectPath
-    && (!writerSettings.writerPersonaEnabled || writerSettings.disabledAuthorRequestIds.length > 0)
-    ? (await resolveWriterPrompt({ agentCorePath, projectPath: args.projectPath, userDataPath: args.userDataPath, settings: writerSettings })).definition
+  const bookAgentOverrides = args.loadNarraCatRuntime && face.includeTaskDispatch && args.projectPath
+    && (!writerSettings.writerPersonaEnabled || writerSettings.disabledProseBlockIds.length > 0 || writerSettings.disabledAuthorRequestIds.length > 0)
+    ? await resolveBookAgentOverrides({ agentCorePath, projectPath: args.projectPath, userDataPath: args.userDataPath, settings: writerSettings })
     : undefined
-  const agentOverrides = writerOverride ? { ...args.agents, 'chapter-writer': writerOverride } : args.agents
+  const agentOverrides = bookAgentOverrides ? { ...args.agents, ...bookAgentOverrides } : args.agents
   const allowedRoots =
     extras.allowedRootsOverride ??
     computeBaselineAllowedRoots({ agentCorePath, novelRootDir: args.config.novelRootDir, projectPath: args.projectPath, cwd })

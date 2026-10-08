@@ -10,6 +10,16 @@ function renderInspector(node: ReactElement): string {
 }
 
 describe('AgentProfileInspector', () => {
+  test('reuses the profile layout with book-specific instructions', () => {
+    const html = renderInspector(<AgentProfileInspector renderInstructions={(agent) => <section>Book prompts for {agent.name}</section>} />)
+    expect(html).toContain('data-agent-profile-tabs="true"')
+    expect(html).toContain('data-agent-profile-portrait="true"')
+    expect(html).toContain('Book prompts for 章节写手')
+    expect(html).not.toContain('data-prose-block-panel="true"')
+    expect(html).not.toContain('data-author-request-panel="true"')
+    expect(html).toContain('data-official-skill-section="chapter-writer"')
+  })
+
   test('keeps the five built-in NarraCat Agent profiles in workflow order', () => {
     expect(NARRACAT_AGENT_PROFILES.map((agent) => agent.id)).toEqual([
       'outline-architect',
