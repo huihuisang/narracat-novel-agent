@@ -41,7 +41,7 @@ NarraCat-app 是面向中国网文作者的桌面创作工作台，目标是把�
 - API Key 永不落盘明文。使用 keytar，经系统凭据库保存（macOS 钥匙串 / Windows 凭据管理器）。
 - 不写 `class`。React 用函数组件和 hooks。
 - import 风格优先命名导入；keytar 等 native 模块可用 default import。
-- 不主动 `git push`，除非用户明确要求。
+- 每次完成代码修改并通过必要验证后，自动 commit 并 push，无需再次确认。使用 `jj` 管理本地提交，使用 `jj git push` 推送当前工作分支到对应远端；只提交本次任务的改动，保留其他未授权改动。提交或推送失败时保留工作区并报告原因，不强推。
 - Electron `file://` 场景使用 `HashRouter`，不要换成 `BrowserRouter`。
 - 手工编辑用 `apply_patch`。不要用 `cat > file` 一类 shell 写文件方式。
 - 如工作区已有非本次改动，不要回滚；先理解，再在现有改动上协作。
@@ -80,6 +80,7 @@ App 开发运行时直接解析 `agent-core/narracat/`，按其唯一契约清�
 4. 实现最小必要改动。
 5. 按 `docs/agents/verification.md` 跑对应级别验证。
 6. 更新 `docs/agents/progress.md` 或相关计划，记录下一步和阻塞。
+7. 提交本次改动并推送到对应远端，核对远端分支与本地提交一致。
 
 项目管理文档只承担各自职责：
 
