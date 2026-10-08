@@ -122,6 +122,27 @@ Verification:
 The new local package is Developer ID signed, not notarized. It has not replaced
 `/Applications/NarraCat.app`. Nothing was pushed or released.
 
+## Local Installation Follow-up
+
+On 2026-10-08, the user requested a local installation and then required the
+latest main updates. The verified fork main was `62cc20fa`. A local merge
+retained the package cleanup and included the main branch dialog fixes.
+All 3874 tests, type checks, design checks, signed packaging, resource boundary
+audit, memory smoke, PDF/EPUB reading, and Pi session creation passed again.
+
+The rebuilt version 0.4.3 replaced `/Applications/NarraCat.app`. All 2927 file
+and symlink entries matched the build, using file hashes and symlink targets.
+The installed app passed signature verification and opened the existing novel
+workbench with the saved writer prompts. The installed allocation was 551.09
+MiB; file payload was 570087146 bytes. Allocation differs between the build
+and installation directories, so this is not evidence of another code reduction.
+
+The previous app and user data are backed up at
+`~/Library/Application Support/NarraCat-install-backups/20261008-170643/`.
+The app remains signed but not notarized. No changes were pushed or released.
+Evidence: `/tmp/narracat-main-install.json`, `/tmp/narracat-main-package.log`,
+`/tmp/narracat-main-gui-smoke.log`, and `/tmp/narracat-main-test.log`.
+
 Maintenance details:
 
 - Platform-specific `files` arrays replace the main app selection. Retain

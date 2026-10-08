@@ -14,7 +14,7 @@ import {
 import { useConfirmDialog } from '@/components/ui/confirm-dialog'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { DESTRUCTIVE_INLINE_CLASS, DIALOG_CONTENT_FORM_CLASS, EMPTY_PRIMARY_BODY_CLASS, EMPTY_PRIMARY_TITLE_CLASS, GROUP_CLASS, WORKBENCH_GUIDE_ACTION_CLASS } from '@/design-system'
+import { DESTRUCTIVE_INLINE_CLASS, DIALOG_CONTENT_FORM_CLASS, DIALOG_SCROLL_SHELL_CLASS, EMPTY_PRIMARY_BODY_CLASS, EMPTY_PRIMARY_TITLE_CLASS, GROUP_CLASS, WORKBENCH_GUIDE_ACTION_CLASS } from '@/design-system'
 import { importReferenceSourceFiles, pasteReferenceSource, removeReferenceSource, resetReferenceWorks } from '@/lib/ipc'
 import {
   REMOVE_REFERENCE_SOURCE_CONFIRM,
@@ -113,13 +113,13 @@ export function ReferenceWorksPasteDialogPanel({
   }
 
   return (
-    <form onSubmit={handleSubmit} data-reference-works-paste-panel="true" className="grid">
-      <DialogHeader className="border-b border-border px-6 pb-5 pt-6 text-left">
+    <form onSubmit={handleSubmit} data-reference-works-paste-panel="true" className="flex min-h-0 flex-col">
+      <DialogHeader className="shrink-0 border-b border-border px-6 pb-5 pt-6 text-left">
         <DialogTitle className="text-lg leading-tight">粘贴一个片段</DialogTitle>
         <DialogDescription className="sr-only">输入片段标题和正文，保存为当前项目的一个参考作品来源。</DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-4 px-6 py-5">
+      <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto px-6 py-5">
         <div data-reference-works-paste-group="true" className={GROUP_CLASS}>
           <PasteField label="片段标题">
             <Input
@@ -143,7 +143,7 @@ export function ReferenceWorksPasteDialogPanel({
         {error ? <div className={`${DESTRUCTIVE_INLINE_CLASS} text-xs`}>{error}</div> : null}
       </div>
 
-      <DialogFooter className="border-t border-border bg-active/40 px-6 py-4">
+      <DialogFooter className="shrink-0 border-t border-border bg-active/40 px-6 py-4">
         <Button type="submit" disabled={!canSubmit} data-reference-works-paste-submit="true">
           保存
         </Button>
@@ -321,7 +321,7 @@ export function ReferenceWorksView({
           粘贴一个片段
         </Button>
       </DialogTrigger>
-      <DialogContent className={DIALOG_CONTENT_FORM_CLASS}>
+      <DialogContent className={`${DIALOG_SCROLL_SHELL_CLASS} ${DIALOG_CONTENT_FORM_CLASS}`}>
         <ReferenceWorksPasteDialogPanel
           busy={busy}
           content={content}

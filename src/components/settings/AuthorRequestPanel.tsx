@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { addAuthorRequest, listAuthorRequests, listProseBlocks, removeAuthorRequest, updateAuthorRequest } from '@/lib/ipc'
 import { computeAgentInstructionBudget } from '@shared/lib/skill-budget'
 import type { AuthorRequest } from '@shared/types/author-request'
-import { DIALOG_CONTENT_FORM_CLASS } from '@/design-system'
+import { DIALOG_CONTENT_FORM_CLASS, DIALOG_SCROLL_SHELL_CLASS } from '@/design-system'
 
 /** 列表行摘要：取第一段有内容的行，超长截断。作者写的是一段话，行上只需认得出是哪条。 */
 export function summarizeRequest(text: string): string {
@@ -124,13 +124,13 @@ export function AuthorRequestDetailBody({
   onRemove?: () => void
 }) {
   return (
-    <div className="min-w-0">
-      <DialogHeader className="border-b border-border px-6 pb-5 pt-6 text-left">
+    <div className="flex min-h-0 min-w-0 flex-col">
+      <DialogHeader className="shrink-0 border-b border-border px-6 pb-5 pt-6 text-left">
         <DialogTitle className="text-lg leading-tight">{existing ? '改一条要求' : '写一条要求'}</DialogTitle>
         <DialogDescription>用你自己的话说就行。下次写作时会带上。</DialogDescription>
       </DialogHeader>
 
-      <div className="min-w-0 px-6 py-5">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-6 py-5">
         <Textarea
           value={draft}
           rows={6}
@@ -141,7 +141,7 @@ export function AuthorRequestDetailBody({
         />
       </div>
 
-      <DialogFooter className="border-t border-border bg-active/40 px-6 py-4">
+      <DialogFooter className="shrink-0 border-t border-border bg-active/40 px-6 py-4">
         {existing ? (
           <Button
             type="button"
@@ -248,7 +248,7 @@ export function AuthorRequestPanel({ agentId }: { agentId: string }) {
       />
       <Dialog open={editingId !== null} onOpenChange={(open) => (open ? undefined : setEditingId(null))}>
         <DialogContent
-          className={DIALOG_CONTENT_FORM_CLASS}
+          className={`${DIALOG_SCROLL_SHELL_CLASS} ${DIALOG_CONTENT_FORM_CLASS}`}
           data-author-request-dialog={agentId}
         >
           {editingId !== null ? (
