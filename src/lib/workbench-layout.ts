@@ -52,7 +52,7 @@ export const WORKBENCH_STAGE_SINGLE_COLUMN_TEMPLATE = 'minmax(0, 1fr)'
  * 取 string 而非 WorkbenchPrimarySectionId：路由那条路径拿到的是 dataset 里的原始字符串。
  */
 export function isFullWidthWorkbenchSection(sectionId: string | undefined): boolean {
-  return sectionId === 'chat' || sectionId === 'memory-graph'
+  return sectionId === 'chat' || sectionId === 'memory-graph' || sectionId === 'writer-prompts'
 }
 
 const TOTAL_FIXED_NONCONTENT_WIDTH =

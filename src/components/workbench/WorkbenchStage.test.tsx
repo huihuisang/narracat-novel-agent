@@ -37,6 +37,13 @@ function contentCardClass(html: string): string {
 }
 
 describe('WorkbenchStage', () => {
+  test('writer prompts renders as a separate full-width page', () => {
+    useNovelStore.getState().setActiveProject(project)
+    const html = renderToStaticMarkup(<TooltipProvider><MemoryRouter><WorkbenchStage selectedSectionId="writer-prompts" selectedObjectId={null} selectedTabId={null} /></MemoryRouter></TooltipProvider>)
+    expect(html).toContain('data-writer-prompt-panel="true"')
+    expect(html).not.toContain('data-agent-panel-column="true"')
+    expect(html).not.toContain('data-capability-pack-panel="true"')
+  })
   test('renders the content and Agent areas as separate cards with an 8px resize lane', () => {
     useNovelStore.getState().setActiveProject(project)
 

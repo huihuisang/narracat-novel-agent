@@ -133,7 +133,7 @@ const UNICODE_SPACES = /[  -   　]/g
  * node:path 当普通相对路径 resolve 到 cwd 下（通常不存在，回落祖先判定=cwd，误放行），前导 `@`
  * 不剥离、Unicode 空格不归一同理。pi 升级须重新核对该源文件是否变化。
  */
-function expandLikePi(raw: string): string {
+export function expandLikePi(raw: string): string {
   const withoutAtPrefix = raw.startsWith('@') ? raw.slice(1) : raw
   const normalized = withoutAtPrefix.replace(UNICODE_SPACES, ' ')
   if (normalized === '~') return homedir()

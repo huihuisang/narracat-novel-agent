@@ -60,6 +60,7 @@ describe('workbench navigation model', () => {
     expect(resolveWorkbenchSectionId(null)).toBe('blueprint')
     expect(resolveWorkbenchSectionId('chat')).toBe('chat')
     expect(resolveWorkbenchSectionId('packs')).toBe('packs')
+    expect(resolveWorkbenchSectionId('writer-prompts')).toBe('writer-prompts')
     expect(resolveWorkbenchSectionId('memory-graph')).toBe('memory-graph')
   })
 
@@ -70,6 +71,7 @@ describe('workbench navigation model', () => {
       { id: 'settings', title: '设定集', pending: true, defaultTabId: 'bible-premise' },
       { id: 'blueprint', title: '小说大纲', pending: true, defaultTabId: 'master-outline' },
       { id: 'packs', title: '能力包', pending: false, defaultTabId: null },
+      { id: 'writer-prompts', title: '写手提示词', pending: false, defaultTabId: null },
       { id: 'chat', title: '唠个嗑', pending: false, defaultTabId: null },
       { id: 'memory-graph', title: '记忆星图', pending: false, defaultTabId: null },
     ])
@@ -83,12 +85,17 @@ describe('workbench navigation model', () => {
     expect(getWorkbenchTabs(project, 'packs')).toEqual([])
   })
 
+  test('writer prompts is an independent page without object tabs', () => {
+    expect(getWorkbenchTabs(project, 'writer-prompts')).toEqual([])
+  })
+
   test('记忆星图 board has no per-object tabs', () => {
     expect(getWorkbenchTabs(project, 'memory-graph')).toEqual([])
   })
 
   test('marks sections pending only when one of its tabs is missing', () => {
     expect(getWorkbenchPrimarySections(completeProject()).map((section) => section.pending)).toEqual([
+      false,
       false,
       false,
       false,
@@ -163,6 +170,7 @@ describe('workbench navigation model', () => {
       { id: 'settings', title: '设定集', pending: true, defaultTabId: 'bible-premise' },
       { id: 'blueprint', title: '小说大纲', pending: false, defaultTabId: 'master-outline' },
       { id: 'packs', title: '能力包', pending: false, defaultTabId: null },
+      { id: 'writer-prompts', title: '写手提示词', pending: false, defaultTabId: null },
       { id: 'chat', title: '唠个嗑', pending: false, defaultTabId: null },
       { id: 'memory-graph', title: '记忆星图', pending: false, defaultTabId: null },
     ])

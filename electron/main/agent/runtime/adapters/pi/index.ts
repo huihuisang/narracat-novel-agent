@@ -46,6 +46,9 @@ import { createPiEngineHooksExtension } from './pi-engine-hooks.ts'
 import { createSubagentEventChannel, createTaskCardTools, createTaskTool } from './pi-subagent.ts'
 import { createAskUserQuestionTool, createPiToolGuard, mapSdkToolFaceToPi } from './pi-tool-guard.ts'
 import { createPiToolCallNameNormalizer } from './pi-toolcall-name-normalizer.ts'
+import { readWriterPromptSettings } from '../../../../novel/writer-prompts.ts'
+import { resolveWriterPrompt } from '../../../../engine/writer-prompt.ts'
+import { createWriterContextReadTool } from './pi-writer-context.ts'
 
 /** 与 claude-sdk adapter 的 DEFAULT_MAX_TURNS 对齐；命令路径经 RuntimeRunConfig.maxTurns 覆盖（48-72 档）。 */
 const DEFAULT_PI_MAX_TURNS = 12
@@ -92,6 +95,14 @@ async function buildPiRunOptions(
   const face = mapSdkToolFaceToPi(extras.sdkToolsOverride ?? args.allowedTools ?? DEFAULT_SDK_ALLOWED_TOOLS, args.disallowedTools)
 
   const agentCorePath = resolveNarraCatEngine({ appRoot: args.appRoot, resourcesPath: args.resourcesPath }).agentCorePath
+  const writerSettings = await readWriterPromptSettings(args.loadNarraCatRuntime && face.includeTaskDispatch ? args.projectPath : undefined)
+  const filterWriterContext = !writerSettings.bookPersonaEnabled || !writerSettings.bookStyleEnabled
+    || writerSettings.bookPersonaChangedAt !== null || writerSettings.bookStyleChangedAt !== null
+  const writerOverride = args.loadNarraCatRuntime && face.includeTaskDispatch && args.projectPath
+    && (!writerSettings.writerPersonaEnabled || writerSettings.disabledAuthorRequestIds.length > 0)
+    ? (await resolveWriterPrompt({ agentCorePath, projectPath: args.projectPath, userDataPath: args.userDataPath, settings: writerSettings })).definition
+    : undefined
+  const agentOverrides = writerOverride ? { ...args.agents, 'chapter-writer': writerOverride } : args.agents
   const allowedRoots =
     extras.allowedRootsOverride ??
     computeBaselineAllowedRoots({ agentCorePath, novelRootDir: args.config.novelRootDir, projectPath: args.projectPath, cwd })
@@ -107,6 +118,7 @@ async function buildPiRunOptions(
   // customTool 覆盖内置那个。只在工具面本来就有它时注入——不给没这个面的会话凭空多一个工具。
   if (face.tools.includes('find')) customTools.push(createPortableFindTool(cwd))
   if (face.tools.includes('grep')) customTools.push(createPortableGrepTool(cwd))
+  if (filterWriterContext && face.tools.includes('read')) customTools.push(createWriterContextReadTool(cwd, writerSettings))
   // 引擎钩子（字数提示/任务书系统词硬门）只在 loadNarraCatRuntime 时挂：学习/向导等沙盒会话
   // 本就不跑引擎契约，与 SDK 侧同条件不装载 plugin 对齐（brief 见 Task 5 任务书）。
   const agentDir = join(args.userDataPath ?? args.appRoot, 'pi-agent')
@@ -172,6 +184,7 @@ async function buildPiRunOptions(
     // 与父会话同一条纪律：写手/审校都跑在子会话里，漏了这条它们的 find/grep 照样是坏的。
     const childCustomTools = [
       ...childMemoryTools,
+      ...(filterWriterContext && childFace.tools.includes('read') ? [createWriterContextReadTool(cwd, writerSettings)] : []),
       ...(childFace.tools.includes('find') ? [createPortableFindTool(cwd)] : []),
       ...(childFace.tools.includes('grep') ? [createPortableGrepTool(cwd)] : []),
     ]
@@ -213,7 +226,7 @@ async function buildPiRunOptions(
         // 不派子 agent 的 run 零解析。解析失败原样冒泡 → execute 的 try/catch → 工具 isError 结果，
         // 模型看得见真实原因（fail-loud）。刻意不兜底成空注册表：空名单会被模型读成「无子 agent
         // 可用」转而在主会话里硬写，质量层静默塌掉，比报错更坏。
-        loadDefinitions: () => resolveEngineAgentDefinitions({ agentCorePath, overrides: args.agents }),
+        loadDefinitions: () => resolveEngineAgentDefinitions({ agentCorePath, overrides: agentOverrides }),
         buildChildRunOptions,
         channel,
         parentSignal: args.abortController.signal,
@@ -230,6 +243,11 @@ async function buildPiRunOptions(
   // 契约时读——沙盒会话（学习/向导/连通性测试，loadNarraCatRuntime:false）零注入，与引擎钩子/记忆
   // 工具同门条件。子会话（buildChildRunOptions）不读，appendix 不透传。
   const agentsGuide = args.loadNarraCatRuntime ? await resolveNovelAgentsGuide(args.projectPath) : null
+  const contextPolicy = [
+    !writerSettings.bookPersonaEnabled ? '本书已关闭书级声音卡。上下文包的声音卡已在读取时移除，不得从历史任务书或会话恢复该声音卡。' : null,
+    !writerSettings.bookStyleEnabled ? '本书已关闭书级文风。上下文包的文风指令与样章示例已在读取时移除，不得从历史任务书或会话恢复这些写法要求。' : null,
+  ].filter(Boolean).join('\n')
+  const sourcePolicy = contextPolicy ? `${contextPolicy}\n剧情与人物上下文仍有效；任务书需要重建时，以当前上下文包为准。` : null
 
   return {
     model,
@@ -244,7 +262,7 @@ async function buildPiRunOptions(
     tools: [...new Set([...face.tools, ...customTools.map((tool) => tool.name)])],
     maxTurns: args.maxTurns ?? DEFAULT_PI_MAX_TURNS,
     systemPrompt: typeof args.systemPrompt === 'string' ? args.systemPrompt : undefined,
-    systemPromptAppendix: agentsGuide ?? undefined,
+    systemPromptAppendix: [agentsGuide, sourcePolicy].filter(Boolean).join('\n\n') || undefined,
     abortController: args.abortController,
     extensions,
     customTools,
