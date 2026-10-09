@@ -98,6 +98,14 @@ async function buildPiRunOptions(
   const writerSettings = await readWriterPromptSettings(args.loadNarraCatRuntime && face.includeTaskDispatch ? args.projectPath : undefined)
   const filterWriterContext = !writerSettings.bookPersonaEnabled || !writerSettings.bookStyleEnabled
     || writerSettings.bookPersonaChangedAt !== null || writerSettings.bookStyleChangedAt !== null
+    || !writerSettings.craftLibraryEnabled || !writerSettings.craftReferencesEnabled || writerSettings.craftSourcesChangedAt !== null
+  const contextPolicy = [
+    !writerSettings.bookPersonaEnabled ? '本书已关闭书级声音卡。上下文包的声音卡已在读取时移除，不得从历史任务书或会话恢复该声音卡。' : null,
+    !writerSettings.bookStyleEnabled ? '本书已关闭书级文风。上下文包的文风指令与样章示例已在读取时移除，不得从历史任务书或会话恢复这些写法要求。' : null,
+    !writerSettings.craftLibraryEnabled ? '本书已关闭网文写作手艺。跳过 novel-web-craft/SKILL.md，不读取、不提炼其原则到任务书，不从历史任务书或会话恢复；其余来源按各自开关处理。' : null,
+    !writerSettings.craftReferencesEnabled ? '本书已关闭选中的写法参考。跳过 craft_pack_hints 及其参考文件，不把能力包中的写法要求提炼到任务书，不从历史任务书或会话恢复；书级声音卡按其开关处理。' : null,
+  ].filter(Boolean).join('\n')
+  const sourcePolicy = contextPolicy ? `${contextPolicy}\n剧情与人物上下文仍有效；任务书需要重建时，以当前上下文包为准。` : null
   const bookAgentOverrides = args.loadNarraCatRuntime && face.includeTaskDispatch && args.projectPath
     && (!writerSettings.writerPersonaEnabled || writerSettings.disabledProseBlockIds.length > 0 || writerSettings.disabledAuthorRequestIds.length > 0)
     ? await resolveBookAgentOverrides({ agentCorePath, projectPath: args.projectPath, userDataPath: args.userDataPath, settings: writerSettings })
@@ -118,7 +126,7 @@ async function buildPiRunOptions(
   // customTool 覆盖内置那个。只在工具面本来就有它时注入——不给没这个面的会话凭空多一个工具。
   if (face.tools.includes('find')) customTools.push(createPortableFindTool(cwd))
   if (face.tools.includes('grep')) customTools.push(createPortableGrepTool(cwd))
-  if (filterWriterContext && face.tools.includes('read')) customTools.push(createWriterContextReadTool(cwd, writerSettings))
+  if (filterWriterContext && face.tools.includes('read')) customTools.push(createWriterContextReadTool(cwd, writerSettings, agentCorePath))
   // 引擎钩子（字数提示/任务书系统词硬门）只在 loadNarraCatRuntime 时挂：学习/向导等沙盒会话
   // 本就不跑引擎契约，与 SDK 侧同条件不装载 plugin 对齐（brief 见 Task 5 任务书）。
   const agentDir = join(args.userDataPath ?? args.appRoot, 'pi-agent')
@@ -184,7 +192,7 @@ async function buildPiRunOptions(
     // 与父会话同一条纪律：写手/审校都跑在子会话里，漏了这条它们的 find/grep 照样是坏的。
     const childCustomTools = [
       ...childMemoryTools,
-      ...(filterWriterContext && childFace.tools.includes('read') ? [createWriterContextReadTool(cwd, writerSettings)] : []),
+      ...(filterWriterContext && childFace.tools.includes('read') ? [createWriterContextReadTool(cwd, writerSettings, agentCorePath)] : []),
       ...(childFace.tools.includes('find') ? [createPortableFindTool(cwd)] : []),
       ...(childFace.tools.includes('grep') ? [createPortableGrepTool(cwd)] : []),
     ]
@@ -201,6 +209,7 @@ async function buildPiRunOptions(
       tools: [...new Set([...childFace.tools, ...childCustomTools.map((tool) => tool.name)])],
       maxTurns: SUBAGENT_MAX_TURNS,
       systemPrompt: definition.prompt,
+      systemPromptAppendix: sourcePolicy ?? undefined,
       abortController: childAbort,
       // 各子会话新起一个实例：救回逻辑的 eager 快照是扩展闭包内的 run 级状态，共用实例会让
       // 并发子会话互相串参数。
@@ -243,12 +252,6 @@ async function buildPiRunOptions(
   // 契约时读——沙盒会话（学习/向导/连通性测试，loadNarraCatRuntime:false）零注入，与引擎钩子/记忆
   // 工具同门条件。子会话（buildChildRunOptions）不读，appendix 不透传。
   const agentsGuide = args.loadNarraCatRuntime ? await resolveNovelAgentsGuide(args.projectPath) : null
-  const contextPolicy = [
-    !writerSettings.bookPersonaEnabled ? '本书已关闭书级声音卡。上下文包的声音卡已在读取时移除，不得从历史任务书或会话恢复该声音卡。' : null,
-    !writerSettings.bookStyleEnabled ? '本书已关闭书级文风。上下文包的文风指令与样章示例已在读取时移除，不得从历史任务书或会话恢复这些写法要求。' : null,
-  ].filter(Boolean).join('\n')
-  const sourcePolicy = contextPolicy ? `${contextPolicy}\n剧情与人物上下文仍有效；任务书需要重建时，以当前上下文包为准。` : null
-
   return {
     model,
     provider: model.provider,

@@ -47,7 +47,7 @@
 - **Agent profile / Agent 设定**：定义小说工作流中一个专业角色及其知识边界的配置；它不是一次 Agent run，也不是 Agent action。
 - **Agent memory / 代理持久记忆**：Claude Code 为特定 Agent 保留的项目级操作偏好层，用于稳定用户偏好、项目风格锚点、反复确认的审修倾向和流程 guardrail。它不是 NovelMemory，不是章节事实库，不承载某一章的剧情、旧草稿经验、WCP JSON 或未来大纲事实；写作代理的留存策略见 ADR 0013。
 - **Agent profile inspector / Agent 设定检查器**：设置中的应用级 Agent 档案，展示五个创作角色的介绍，管理全局人设调整与作者要求，并提供官方能力的只读查看。它不配置模型和工具权限。
-- **Book Agent profiles / 书级 Agent 档案**：工作台中的「Agents 档案」，复用设置的角色切换、立绘与简介，查看当前提示词来源并按书开关各 Agent 的人设和作者要求。声音卡和书级文风是章节写手的独立来源。选择从下一次运行生效，不修改全局原文。
+- **Book Agent profiles / 书级 Agent 档案**：工作台中的「Agents 档案」，复用设置的角色切换、立绘与简介，查看当前提示词来源并按书开关各 Agent 的人设和作者要求。声音卡、书级文风、网文写作手艺与选中的写法参考是章节写手的独立来源；后两项由主 Agent 提炼进任务书。选择从下一次运行生效，写法来源切换后旧任务书必须重建，不修改全局原文。
 - **Skill / 技能包**：可挂载到 Agent profile 的领域知识包；它不是用户直接点击执行的 Agent action。Skill 与 Agent 的关系是 **(Skill, Agent) 绑定**——同一个 Skill 对不同 Agent 可呈现为不同类别、或根本不出现。官方 Skill 按与 Agent 的绑定分为内部 / Agent 默认 / 可挂载三类；作者另可挂载用户自定义 Skill。
 - **内部 Skill / Internal skill**：不绑定任何 Agent、仅供命令或主会话内部调用的官方 Skill；不出现在任何 Agent 配置页。
 - **Agent 默认 Skill / Agent default skill**：随某个 Agent 出厂、绑定该 Agent 的官方 Skill；在该 Agent 配置页可见且锁定，作者不可卸载。

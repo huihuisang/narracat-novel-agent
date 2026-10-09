@@ -17,6 +17,21 @@ afterEach(async () => {
 })
 
 describe('per-book writer prompt sources', () => {
+  test('craft switches persist independently, default to enabled, and invalidate briefs only on change', async () => {
+    const root = await workspace()
+    await mkdir(join(root, '.narracat'))
+    await writeFile(join(root, '.narracat/writer-prompts.json'), JSON.stringify({ version: 1, writerPersonaEnabled: false, bookPersonaEnabled: false, disabledAuthorRequestIds: [], bookPersonaChangedAt: null }))
+    expect(await readWriterPromptSettings(root)).toMatchObject({ craftLibraryEnabled: true, craftReferencesEnabled: true, craftSourcesChangedAt: null })
+    await updateWriterPromptSettings(root, { kind: 'craft-library', enabled: false })
+    const first = await readWriterPromptSettings(root)
+    expect(first).toMatchObject({ craftLibraryEnabled: false, craftReferencesEnabled: true, writerPersonaEnabled: false, bookPersonaEnabled: false })
+    expect(first.craftSourcesChangedAt).not.toBeNull()
+    await updateWriterPromptSettings(root, { kind: 'craft-library', enabled: false })
+    expect((await readWriterPromptSettings(root)).craftSourcesChangedAt).toBe(first.craftSourcesChangedAt)
+    await updateWriterPromptSettings(root, { kind: 'craft-references', enabled: false })
+    expect(await readWriterPromptSettings(root)).toMatchObject({ craftLibraryEnabled: false, craftReferencesEnabled: false })
+  })
+
   test('other agent personas persist independently and preserve legacy writer choices', async () => {
     const root = await workspace()
     await updateWriterPromptSettings(root, { kind: 'writer-persona', enabled: false })

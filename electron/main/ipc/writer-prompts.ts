@@ -39,7 +39,7 @@ export function registerWriterPromptsIpcHandlers(): void {
     const change = value.change
     if (change.kind === 'agent-persona' && !current.proseBlocks.some((block) => block.id === change.id)) throw new Error('该人设不属于当前 Agent。')
     if (change.kind === 'author-request' && !current.authorRequests.some((request) => request.id === change.id)) throw new Error('该要求不属于当前 Agent。')
-    if (agentId !== 'chapter-writer' && ['writer-persona', 'book-persona', 'book-style'].includes(change.kind)) throw new Error('声音卡和书级文风属于章节写手。')
+    if (agentId !== 'chapter-writer' && ['writer-persona', 'book-persona', 'book-style', 'craft-library', 'craft-references'].includes(change.kind)) throw new Error('这些写法来源属于章节写手。')
     await updateWriterPromptSettings(projectPath, value.change)
     // Invalidate cached history without aborting the run already in progress.
     await invalidateAgentSessions('writer-prompts-changed')

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { defaultWriterPromptSettings } from '@shared/types/writer-prompts'
@@ -16,6 +16,61 @@ async function workspace() {
 }
 
 describe('writer context delivery', () => {
+  test('craft library and selected references are independent, including canonical aliases', async () => {
+    const root = await workspace()
+    const core = await workspace()
+    const library = join(core, 'skills/novel-web-craft/SKILL.md')
+    const reference = join(core, 'custom-craft.md')
+    await mkdir(join(core, 'skills/novel-web-craft'), { recursive: true })
+    await writeFile(library, 'Library principle')
+    await writeFile(reference, 'Selected craft principle')
+    await symlink(library, join(root, 'library-alias.md'))
+    await symlink(reference, join(root, 'reference-alias.md'))
+    const file = join(root, '.narracat/context-packs/ch-001.json')
+    const pack = { craft_pack_hints: [{ reference_path: reference }], persona: 'Voice', style_directive: 'Style', chapter_outline: 'Plot' }
+    await writeFile(file, JSON.stringify(pack))
+    const text = async (tool: ReturnType<typeof createWriterContextReadTool>, path: string) => {
+      const result = await tool.execute('r1', { path }, undefined, undefined, {} as never)
+      return result.content.map((part) => part.type === 'text' ? part.text : '').join('')
+    }
+    const noLibrary = createWriterContextReadTool(root, { ...defaultWriterPromptSettings(), craftLibraryEnabled: false }, core)
+    expect(await text(noLibrary, join(root, 'library-alias.md'))).not.toContain('Library principle')
+    expect(await text(noLibrary, reference)).toContain('Selected craft principle')
+    expect(await text(noLibrary, file)).toContain('craft_pack_hints')
+    const noReferences = createWriterContextReadTool(root, { ...defaultWriterPromptSettings(), craftReferencesEnabled: false }, core)
+    expect(await text(noReferences, library)).toContain('Library principle')
+    expect(await text(noReferences, join(root, 'reference-alias.md'))).not.toContain('Selected craft principle')
+    const context = await text(noReferences, file)
+    expect(context).not.toContain('craft_pack_hints')
+    for (const value of ['Voice', 'Style', 'Plot']) expect(context).toContain(value)
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual(pack)
+  })
+
+  test('craft switches invalidate old briefs even when the sources are re-enabled', async () => {
+    const root = await workspace()
+    const file = join(root, '.narracat/staging/ch-001.brief.md')
+    await writeFile(file, 'Old craft requirements')
+    const tool = createWriterContextReadTool(root, { ...defaultWriterPromptSettings(), craftSourcesChangedAt: new Date(Date.now() + 10000).toISOString() })
+    await expect(tool.execute('r1', { path: file }, undefined, undefined, {} as never)).rejects.toThrow('重新生成')
+  })
+
+  test('a newly rebuilt pack refreshes blocked reference paths without changing source files', async () => {
+    const root = await workspace()
+    const first = join(root, 'first.md')
+    const next = join(root, 'next.md')
+    await writeFile(first, 'First reference')
+    await writeFile(next, 'New reference')
+    const pack = join(root, '.narracat/context-packs/ch-001.json')
+    await writeFile(pack, JSON.stringify({ craft_pack_hints: [{ reference_path: first }] }))
+    const tool = createWriterContextReadTool(root, { ...defaultWriterPromptSettings(), craftReferencesEnabled: false })
+    await tool.execute('r1', { path: first }, undefined, undefined, {} as never)
+    await writeFile(pack, JSON.stringify({ craft_pack_hints: [{ reference_path: next }] }))
+    await tool.execute('r2', { path: pack }, undefined, undefined, {} as never)
+    const result = await tool.execute('r3', { path: next }, undefined, undefined, {} as never)
+    expect(result.content.map((part) => part.type === 'text' ? part.text : '').join('')).not.toContain('New reference')
+    expect(await readFile(next, 'utf8')).toBe('New reference')
+  })
+
   test('disabled book style removes its directive and samples but preserves voice and plot', async () => {
     const root = await workspace()
     const file = join(root, '.narracat/context-packs/ch-001.json')

@@ -5,6 +5,9 @@ export interface WriterPromptSettings {
   writerPersonaEnabled: boolean
   bookPersonaEnabled: boolean
   bookStyleEnabled: boolean
+  craftLibraryEnabled: boolean
+  craftReferencesEnabled: boolean
+  craftSourcesChangedAt: string | null
   disabledAuthorRequestIds: string[]
   disabledProseBlockIds: string[]
   bookPersonaChangedAt: string | null
@@ -16,6 +19,8 @@ export type WriterPromptChange =
   | { kind: 'agent-persona'; id: string; enabled: boolean }
   | { kind: 'book-persona'; enabled: boolean }
   | { kind: 'book-style'; enabled: boolean }
+  | { kind: 'craft-library'; enabled: boolean }
+  | { kind: 'craft-references'; enabled: boolean }
   | { kind: 'author-request'; id: string; enabled: boolean }
 
 export interface WriterPromptPreview {
@@ -26,11 +31,12 @@ export interface WriterPromptPreview {
   writerPersonaOrigin: 'official' | 'user'
   authorRequests: { id: string; text: string; enabled: boolean }[]
   systemPrompt: string
-  bookContext: { chapter: number; persona: string; styleDirective: string } | null
+  craftLibrary: string
+  bookContext: { chapter: number; persona: string; styleDirective: string; craftReferences: string[] } | null
 }
 
 export function defaultWriterPromptSettings(): WriterPromptSettings {
-  return { version: 1, writerPersonaEnabled: true, bookPersonaEnabled: true, bookStyleEnabled: true, disabledAuthorRequestIds: [], disabledProseBlockIds: [], bookPersonaChangedAt: null, bookStyleChangedAt: null }
+  return { version: 1, writerPersonaEnabled: true, bookPersonaEnabled: true, bookStyleEnabled: true, craftLibraryEnabled: true, craftReferencesEnabled: true, craftSourcesChangedAt: null, disabledAuthorRequestIds: [], disabledProseBlockIds: [], bookPersonaChangedAt: null, bookStyleChangedAt: null }
 }
 
 export function isProseSourceEnabled(settings: WriterPromptSettings, id: string): boolean {
@@ -41,7 +47,7 @@ export function isWriterPromptChange(value: unknown): value is WriterPromptChang
   if (!value || typeof value !== 'object') return false
   const input = value as Record<string, unknown>
   if (typeof input.enabled !== 'boolean') return false
-  if (input.kind === 'writer-persona' || input.kind === 'book-persona' || input.kind === 'book-style') return true
+  if (input.kind === 'writer-persona' || input.kind === 'book-persona' || input.kind === 'book-style' || input.kind === 'craft-library' || input.kind === 'craft-references') return true
   if (input.kind === 'agent-persona') return typeof input.id === 'string' && PROSE_BLOCK_ID_RE.test(input.id)
   return input.kind === 'author-request' && typeof input.id === 'string' && input.id.trim().length > 0
 }

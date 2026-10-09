@@ -21,6 +21,9 @@ The chapter writer receives several independent sources: its agent persona, glob
 - Apply per-book persona and author requirement choices to all five built-in agents. Extend the existing v1 file with `disabledProseBlockIds`, defaulting to an empty list. Keep the writer's existing persona choice and disabled requirement ids. Voice and style controls remain specific to the chapter writer.
 - Use the same agent assembler for each profile's source preview and runtime definition. Validate the selected agent and source ownership before saving a switch. Mandatory workflow, file, and tool rules remain present.
 - Invalid settings stop loading and writing. Do not silently restore enabled defaults or overwrite a file that cannot be read.
+- Add independent writer controls for the `novel-web-craft` material library and selected craft references. Older v1 files enable both. The library remains viewable when disabled; selected reference previews show the latest pack's selection reasons, without adding a general card-body viewer.
+- Enforce craft choices on the main agent that compresses the brief and on dispatched agents. Disabled library or reference reads return a disabled-source notice. Remove `craft_pack_hints` from delivered context packs when references are disabled. Match canonical paths, including aliases and imported reference files. Keep stored sources intact.
+- Record `craftSourcesChangedAt` on a craft choice change and include it in the stale-brief check. Re-enabling a source also requires a fresh brief. Apply the captured source policy to both main and child sessions; new pack reads refresh the selected-reference path cache.
 
 ## Consequences
 

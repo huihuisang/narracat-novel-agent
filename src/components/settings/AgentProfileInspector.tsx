@@ -52,9 +52,10 @@ export const NARRACAT_AGENT_PROFILES: NarraCatAgentProfile[] = [
 
 const DEFAULT_AGENT_ID = 'chapter-writer'
 
-export function AgentProfileInspector({ initialAgentId = DEFAULT_AGENT_ID, renderInstructions, onAgentChange, selectionDisabled = false }: {
+export function AgentProfileInspector({ initialAgentId = DEFAULT_AGENT_ID, renderInstructions, renderOfficialSkills, onAgentChange, selectionDisabled = false }: {
   initialAgentId?: string
   renderInstructions?: (agent: NarraCatAgentProfile) => ReactNode
+  renderOfficialSkills?: (agent: NarraCatAgentProfile) => ReactNode
   onAgentChange?: (agentId: string) => void
   selectionDisabled?: boolean
 } = {}) {
@@ -145,7 +146,7 @@ export function AgentProfileInspector({ initialAgentId = DEFAULT_AGENT_ID, rende
           </>
         )}
 
-        <OfficialSkillSection agentId={selectedAgent.id} />
+        {renderOfficialSkills ? renderOfficialSkills(selectedAgent) : <OfficialSkillSection agentId={selectedAgent.id} />}
       </div>
     </section>
   )

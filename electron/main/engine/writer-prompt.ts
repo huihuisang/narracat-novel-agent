@@ -8,6 +8,7 @@ import { assembleAgentSkills, type AssembledAgentDefinition } from './assemble-a
 import { authorRequestStorePath, listAuthorRequests } from './author-request-store'
 import { proseOverrideStorePath, readProseOverrides } from './prose-override-store'
 import { NARRACAT_ENGINE_AGENT_IDS } from './agent-core-contract'
+import { readOfficialSkillBody } from './official-skill-body'
 
 export interface WriterPromptInput {
   projectPath: string
@@ -17,7 +18,7 @@ export interface WriterPromptInput {
   agentId?: string
 }
 
-export async function resolveAgentPrompt(input: WriterPromptInput): Promise<Omit<WriterPromptPreview, 'systemPrompt' | 'bookContext'> & { definition: AssembledAgentDefinition }> {
+export async function resolveAgentPrompt(input: WriterPromptInput): Promise<Omit<WriterPromptPreview, 'systemPrompt' | 'bookContext' | 'craftLibrary'> & { definition: AssembledAgentDefinition }> {
   const agentId = input.agentId ?? 'chapter-writer'
   if (!(NARRACAT_ENGINE_AGENT_IDS as readonly string[]).includes(agentId)) throw new Error('Agent 档案不存在。')
   const [settings, overrides, requests, source] = await Promise.all([
@@ -77,11 +78,17 @@ async function readLatestBookContext(projectPath: string): Promise<WriterPromptP
     chapter: Number(latest.file.match(/\d+/)?.[0]),
     persona: typeof pack.persona === 'string' ? pack.persona : '',
     styleDirective: typeof pack.style_directive === 'string' ? pack.style_directive : '',
+    craftReferences: Array.isArray(pack.craft_pack_hints) ? pack.craft_pack_hints.flatMap((hint: unknown) => {
+      if (!hint || typeof hint !== 'object') return []
+      const reason = (hint as Record<string, unknown>).reason
+      return typeof reason === 'string' && reason.trim() ? [reason] : []
+    }) : [],
   }
 }
 
 export async function getWriterPromptPreview(input: WriterPromptInput): Promise<WriterPromptPreview> {
-  const [resolved, bookContext] = await Promise.all([resolveAgentPrompt(input), (input.agentId ?? 'chapter-writer') === 'chapter-writer' ? readLatestBookContext(input.projectPath) : Promise.resolve(null)])
+  const isWriter = (input.agentId ?? 'chapter-writer') === 'chapter-writer'
+  const [resolved, bookContext, craftLibrary] = await Promise.all([resolveAgentPrompt(input), isWriter ? readLatestBookContext(input.projectPath) : Promise.resolve(null), isWriter ? readOfficialSkillBody({ agentCorePath: input.agentCorePath, skillId: 'novel-web-craft' }) : Promise.resolve('')])
   const { definition, ...sources } = resolved
-  return { ...sources, systemPrompt: definition.prompt, bookContext }
+  return { ...sources, systemPrompt: definition.prompt, bookContext, craftLibrary }
 }

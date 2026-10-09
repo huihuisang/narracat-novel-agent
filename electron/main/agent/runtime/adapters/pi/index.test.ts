@@ -97,6 +97,39 @@ test('style-only choices filter both dispatched context readers and keep the voi
   }
 })
 
+test('each craft source combination reaches the main agent and dispatched writer', async () => {
+  const projectPath = await mkdtemp(join(tmpdir(), 'writer-craft-dispatch-'))
+  try {
+    await mkdir(join(projectPath, '.narracat/context-packs'), { recursive: true })
+    const reference = join(projectPath, 'craft-reference.md')
+    await writeFile(reference, 'SELECTED-CRAFT-CONTENT')
+    const pack = join(projectPath, '.narracat/context-packs/ch-001.json')
+    await writeFile(pack, JSON.stringify({ craft_pack_hints: [{ reference_path: reference }], persona: 'Keep voice', style_directive: 'Keep style', chapter_outline: 'Keep plot' }))
+    const library = join(process.cwd(), 'agent-core/narracat/skills/novel-web-craft/SKILL.md')
+    for (const craftLibraryEnabled of [true, false]) for (const craftReferencesEnabled of [true, false]) {
+      await writeFile(join(projectPath, '.narracat/writer-prompts.json'), JSON.stringify({ ...defaultWriterPromptSettings(), craftLibraryEnabled, craftReferencesEnabled }))
+      const options = await createPiAdapter().createRunOptions(makeRunConfig({ appRoot: process.cwd(), projectPath, loadNarraCatRuntime: true, allowedTools: ['Read', 'Agent'] })) as PiRunOptions
+      capturedChildSessionCalls = []
+      await options.customTools.find((tool) => tool.name === 'Task')!.execute('craft-tc', { subagent_type: 'narracat:chapter-writer', prompt: 'Write the chapter.' }, undefined, undefined, {} as never)
+      for (const session of [options, capturedChildSessionCalls[0].options]) {
+        const reader = session.customTools.find((tool) => tool.name === 'read')
+        if (craftLibraryEnabled && craftReferencesEnabled) { expect(reader).toBeUndefined(); continue }
+        const text = async (path: string) => {
+          const result = await reader!.execute('craft-read', { path }, undefined, undefined, {} as never)
+          return result.content.map((part) => part.type === 'text' ? part.text : '').join('')
+        }
+        expect((await text(library)).includes('开篇即抓人')).toBe(craftLibraryEnabled)
+        expect((await text(reference)).includes('SELECTED-CRAFT-CONTENT')).toBe(craftReferencesEnabled)
+        const delivered = await text(pack)
+        expect(delivered.includes('craft_pack_hints')).toBe(craftReferencesEnabled)
+        for (const value of ['Keep voice', 'Keep style', 'Keep plot']) expect(delivered).toContain(value)
+        expect((session.systemPromptAppendix ?? '').includes('已关闭网文写作手艺')).toBe(!craftLibraryEnabled)
+        expect((session.systemPromptAppendix ?? '').includes('已关闭选中的写法参考')).toBe(!craftReferencesEnabled)
+      }
+    }
+  } finally { await rm(projectPath, { recursive: true, force: true }) }
+})
+
 test('per-book source choices reach dispatched writer sessions and both read tools', async () => {
   const projectPath = await mkdtemp(join(tmpdir(), 'writer-dispatch-'))
   const userDataPath = await mkdtemp(join(tmpdir(), 'writer-dispatch-user-'))

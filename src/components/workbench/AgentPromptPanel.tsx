@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ChevronRight, RefreshCw } from 'lucide-react'
 import { AgentProfileInspector, NARRACAT_AGENT_PROFILES } from '@/components/settings/AgentProfileInspector'
+import { OfficialSkillSection } from '@/components/settings/OfficialSkillSection'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { IconTooltip } from '@/components/ui/icon-tooltip'
@@ -10,7 +11,11 @@ import { DIALOG_CONTENT_FORM_CLASS, DIALOG_SCROLL_SHELL_CLASS, MUTED_PILL_CLASS 
 import { cn } from '@/lib/cn'
 import type { WriterPromptChange, WriterPromptPreview } from '@shared/types/writer-prompts'
 
-type PromptTarget = 'system' | 'book-persona' | 'book-style' | `prose:${string}` | `request:${string}`
+type PromptTarget = 'system' | 'book-persona' | 'book-style' | 'craft-library' | 'craft-references' | `prose:${string}` | `request:${string}`
+
+function craftReferenceText(preview: WriterPromptPreview): string {
+  return preview.bookContext?.craftReferences.map((reason, index) => `参考 ${index + 1}：${reason}`).join('\n') || '最近上下文尚未选中写法参考。'
+}
 
 function PromptSourceRow({ title, text, enabled, disabled, onOpen, onToggle, badge }: {
   title: string
@@ -96,9 +101,9 @@ export function AgentPromptPanelView({ preview, agentId = preview?.agentId ?? 'c
   const block = active?.proseBlocks.find((item) => target === `prose:${item.id}`)
   const request = active?.authorRequests.find((item) => target === `request:${item.id}`)
   const title = target === 'system' ? `${agent?.name ?? 'Agent'}当前提示词`
-    : target === 'book-persona' ? '书级声音卡' : target === 'book-style' ? '书级文风' : block?.title ?? '作者要求'
+    : target === 'book-persona' ? '书级声音卡' : target === 'book-style' ? '书级文风' : target === 'craft-library' ? '网文写作手艺' : target === 'craft-references' ? '选中的写法参考' : block?.title ?? '作者要求'
   const text = target === 'system' ? active?.systemPrompt
-    : target === 'book-persona' ? bookContext?.persona : target === 'book-style' ? bookContext?.styleDirective : block?.text ?? request?.text
+    : target === 'book-persona' ? bookContext?.persona : target === 'book-style' ? bookContext?.styleDirective : target === 'craft-library' ? active?.craftLibrary : target === 'craft-references' && active ? craftReferenceText(active) : block?.text ?? request?.text
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-agent-prompt-panel="true">
@@ -119,7 +124,13 @@ export function AgentPromptPanelView({ preview, agentId = preview?.agentId ?? 'c
               <p className="text-xs leading-6 text-muted-foreground">只影响当前这本书，下次运行生效。</p>
               {active && active.agentId === selected.id ? <AgentPromptSources preview={active} busy={busy} onChange={onChange} onOpen={setTarget} /> : <p className="text-sm text-muted-foreground">{busy ? '正在读取提示词…' : '提示词尚未加载。'}</p>}
             </>
-          )} />
+          )} renderOfficialSkills={(selected) => selected.id === 'chapter-writer' ? (
+            active ? <section aria-label="它自带的本事" className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground">它自带的本事</h3>
+              <PromptSourceRow title="网文写作手艺" text={active.craftLibrary} enabled={active.settings.craftLibraryEnabled} disabled={busy} onOpen={() => setTarget('craft-library')} onToggle={(enabled) => onChange?.({ kind: 'craft-library', enabled })} />
+              <PromptSourceRow title="选中的写法参考" text={craftReferenceText(active)} enabled={active.settings.craftReferencesEnabled} disabled={busy} onOpen={() => setTarget('craft-references')} onToggle={(enabled) => onChange?.({ kind: 'craft-references', enabled })} />
+            </section> : null
+          ) : <OfficialSkillSection agentId={selected.id} />} />
         </div>
       </ScrollArea>
       <Dialog open={target !== null} onOpenChange={(open) => { if (!open) setTarget(null) }}>
@@ -134,6 +145,12 @@ export function AgentPromptPanelView({ preview, agentId = preview?.agentId ?? 'c
               <>
                 {active?.settings.bookPersonaEnabled && bookContext.persona ? <section className="space-y-2"><h3 className="text-sm font-semibold">书级声音卡 · 上下文</h3><PromptText>{bookContext.persona}</PromptText></section> : null}
                 {active?.settings.bookStyleEnabled ? <section className="space-y-2"><h3 className="text-sm font-semibold">书级文风 · 上下文</h3><PromptText>{bookContext.styleDirective}</PromptText></section> : null}
+              </>
+            ) : null}
+            {target === 'system' && active?.agentId === 'chapter-writer' ? (
+              <>
+                {active.settings.craftLibraryEnabled ? <section className="space-y-2"><h3 className="text-sm font-semibold">任务书素材 · 网文写作手艺</h3><PromptText>{active.craftLibrary}</PromptText></section> : null}
+                {active.settings.craftReferencesEnabled ? <section className="space-y-2"><h3 className="text-sm font-semibold">任务书素材 · 选中的写法参考</h3><PromptText>{craftReferenceText(active)}</PromptText></section> : null}
               </>
             ) : null}
           </div>

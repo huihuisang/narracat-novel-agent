@@ -1,25 +1,40 @@
-import { access, readFile, realpath, stat } from 'node:fs/promises'
-import { relative, resolve } from 'node:path'
+import { access, readFile, readdir, realpath, stat } from 'node:fs/promises'
+import { join, relative, resolve } from 'node:path'
 import { createReadToolDefinition } from '@mariozechner/pi-coding-agent'
 import type { ToolDefinition } from '@mariozechner/pi-coding-agent'
 import type { WriterPromptSettings } from '@shared/types/writer-prompts'
 import { expandLikePi } from './pi-tool-guard'
 
-export function createWriterContextReadTool(cwd: string, settings: WriterPromptSettings): ToolDefinition {
+async function selectedReferencePaths(cwd: string): Promise<Set<string>> {
+  const directory = join(cwd, '.narracat/context-packs')
+  const files = await readdir(directory).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return []
+    throw error
+  })
+  const paths = new Set<string>()
+  for (const file of files.filter((name) => /^ch-\d+\.json$/.test(name))) {
+    let pack: Record<string, unknown>
+    try { pack = JSON.parse(await readFile(join(directory, file), 'utf8')) } catch (error) {
+      if (error instanceof SyntaxError || (error as NodeJS.ErrnoException).code === 'ENOENT') continue
+      throw error
+    }
+    if (!Array.isArray(pack?.craft_pack_hints)) continue
+    for (const hint of pack.craft_pack_hints) {
+      if (typeof hint?.reference_path !== 'string') continue
+      const path = resolve(cwd, hint.reference_path)
+      paths.add(await realpath(path).catch(() => path))
+    }
+  }
+  return paths
+}
+
+export function createWriterContextReadTool(cwd: string, settings: WriterPromptSettings, agentCorePath?: string): ToolDefinition {
   const normal = createReadToolDefinition(cwd)
-  const filtered = createReadToolDefinition(cwd, {
+  let references: Promise<Set<string>> | undefined
+  const filtered = (text: string) => createReadToolDefinition(cwd, {
     operations: {
       access,
-      async readFile(file) {
-        const pack = JSON.parse(await readFile(file, 'utf8')) as Record<string, unknown>
-        const context = { ...pack }
-        if (!settings.bookPersonaEnabled) delete context.persona
-        if (!settings.bookStyleEnabled) {
-          delete context.style_directive
-          delete context.style_examples
-        }
-        return Buffer.from(JSON.stringify(context, null, 2))
-      },
+      readFile: async () => Buffer.from(text),
     },
   })
   const tool: ReturnType<typeof createReadToolDefinition> = {
@@ -29,17 +44,36 @@ export function createWriterContextReadTool(cwd: string, settings: WriterPromptS
       const file = await realpath(resolve(cwd, expandLikePi(params.path)))
       const root = await realpath(cwd)
       const local = relative(root, file).replaceAll('\\', '/')
+      const isContextPack = /^\.narracat\/context-packs\/ch-\d+\.json$/.test(local)
       const contextChangedAt = Math.max(
         settings.bookPersonaChangedAt ? Date.parse(settings.bookPersonaChangedAt) : 0,
         settings.bookStyleChangedAt ? Date.parse(settings.bookStyleChangedAt) : 0,
+        settings.craftSourcesChangedAt ? Date.parse(settings.craftSourcesChangedAt) : 0,
       )
       if (/^\.narracat\/staging\/ch-\d+\.brief\.md$/.test(local) && contextChangedAt > 0) {
         if ((await stat(file)).mtimeMs < contextChangedAt) {
           throw new Error('本书写法来源选项已更改，请重新读取当前上下文包并重新生成本章任务书，再派发写手。')
         }
       }
-      if ((!settings.bookPersonaEnabled || !settings.bookStyleEnabled) && /^\.narracat\/context-packs\/ch-\d+\.json$/.test(local)) {
-        return filtered.execute(id, { ...params, path: file }, signal, onUpdate, context)
+      if (agentCorePath && !settings.craftLibraryEnabled) {
+        const library = await realpath(join(agentCorePath, 'skills/novel-web-craft/SKILL.md'))
+        if (file === library) return filtered('本书已关闭网文写作手艺，跳过此来源，不向章节任务书添加其写法要求。').execute(id, { ...params, path: file }, signal, onUpdate, context)
+      }
+      if (!settings.craftReferencesEnabled && !isContextPack && (await (references ??= selectedReferencePaths(root))).has(file)) {
+        return filtered('本书已关闭选中的写法参考，跳过此来源，不向章节任务书添加其写法要求。').execute(id, { ...params, path: file }, signal, onUpdate, context)
+      }
+      if ((!settings.bookPersonaEnabled || !settings.bookStyleEnabled || !settings.craftReferencesEnabled) && isContextPack) {
+        // A rebuilt pack can select new files during this run.
+        references = undefined
+        const pack = JSON.parse(await readFile(file, 'utf8')) as Record<string, unknown>
+        const delivered = { ...pack }
+        if (!settings.bookPersonaEnabled) delete delivered.persona
+        if (!settings.bookStyleEnabled) {
+          delete delivered.style_directive
+          delete delivered.style_examples
+        }
+        if (!settings.craftReferencesEnabled) delete delivered.craft_pack_hints
+        return filtered(JSON.stringify(delivered, null, 2)).execute(id, { ...params, path: file }, signal, onUpdate, context)
       }
       return normal.execute(id, params, signal, onUpdate, context)
     },

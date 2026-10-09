@@ -11,7 +11,8 @@ const preview: WriterPromptPreview = {
   writerPersona: 'Custom writer persona',
   writerPersonaOrigin: 'user',
   systemPrompt: 'Effective system prompt',
-  bookContext: { chapter: 3, persona: 'Book narrator card', styleDirective: 'Book style direction' },
+  craftLibrary: 'Craft library principles',
+  bookContext: { chapter: 3, persona: 'Book narrator card', styleDirective: 'Book style direction', craftReferences: ['Negotiation dialogue'] },
   authorRequests: [{ id: 'a', text: 'First requirement', enabled: true }, { id: 'b', text: 'Second requirement', enabled: false }],
 }
 
@@ -27,7 +28,9 @@ describe('AgentPromptPanel', () => {
     expect(html).toContain('第 3 章')
     expect(html).toContain('First requirement')
     expect(html).toContain('Second requirement')
-    expect(html.match(/role="switch"/g)).toHaveLength(5)
+    expect(html.match(/role="switch"/g)).toHaveLength(7)
+    expect(html).toContain('aria-label="启用网文写作手艺"')
+    expect(html).toContain('aria-label="启用选中的写法参考"')
     expect(html).toContain('aria-label="启用书级文风"')
     expect(html).toContain('aria-label="启用要求 2"')
     expect(html).toContain('下次运行生效')

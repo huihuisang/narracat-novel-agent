@@ -21,12 +21,15 @@ export async function readWriterPromptSettings(projectPath?: string): Promise<Wr
     const value = raw as Record<string, unknown>
     if (value.version === 1 && typeof value.writerPersonaEnabled === 'boolean' && typeof value.bookPersonaEnabled === 'boolean'
       && (value.bookStyleEnabled === undefined || typeof value.bookStyleEnabled === 'boolean')
+      && (value.craftLibraryEnabled === undefined || typeof value.craftLibraryEnabled === 'boolean')
+      && (value.craftReferencesEnabled === undefined || typeof value.craftReferencesEnabled === 'boolean')
+      && (value.craftSourcesChangedAt === undefined || value.craftSourcesChangedAt === null || (typeof value.craftSourcesChangedAt === 'string' && Number.isFinite(Date.parse(value.craftSourcesChangedAt))))
       && (value.bookStyleChangedAt === undefined || value.bookStyleChangedAt === null || (typeof value.bookStyleChangedAt === 'string' && Number.isFinite(Date.parse(value.bookStyleChangedAt))))
       && Array.isArray(value.disabledAuthorRequestIds) && value.disabledAuthorRequestIds.every((id) => typeof id === 'string' && id.trim())
       && (value.disabledProseBlockIds === undefined || (Array.isArray(value.disabledProseBlockIds) && value.disabledProseBlockIds.every((id) => typeof id === 'string' && PROSE_BLOCK_ID_RE.test(id))))
       && (value.bookPersonaChangedAt === null || (typeof value.bookPersonaChangedAt === 'string' && Number.isFinite(Date.parse(value.bookPersonaChangedAt))))) {
       // Older v1 files retain their choices and keep book style enabled.
-      return { ...value, disabledProseBlockIds: value.disabledProseBlockIds ?? [], bookStyleEnabled: value.bookStyleEnabled ?? true, bookStyleChangedAt: value.bookStyleChangedAt ?? null } as unknown as WriterPromptSettings
+      return { ...defaultWriterPromptSettings(), ...value, disabledProseBlockIds: value.disabledProseBlockIds ?? [], bookStyleEnabled: value.bookStyleEnabled ?? true, bookStyleChangedAt: value.bookStyleChangedAt ?? null } as unknown as WriterPromptSettings
     }
   }
   throw new Error('本书写手提示词设置格式无效，请检查 writer-prompts.json。')
@@ -54,6 +57,12 @@ export async function updateWriterPromptSettings(projectPath: string, change: Wr
       if (previous.bookStyleEnabled !== change.enabled) {
         next.bookStyleEnabled = change.enabled
         next.bookStyleChangedAt = new Date().toISOString()
+      }
+    } else if (change.kind === 'craft-library' || change.kind === 'craft-references') {
+      const key = change.kind === 'craft-library' ? 'craftLibraryEnabled' : 'craftReferencesEnabled'
+      if (previous[key] !== change.enabled) {
+        next[key] = change.enabled
+        next.craftSourcesChangedAt = new Date().toISOString()
       }
     } else {
       next.disabledAuthorRequestIds = change.enabled
