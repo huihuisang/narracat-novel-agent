@@ -15,7 +15,7 @@ import {
 import { openMemoryDbReadonly } from '../novel/memory-db.ts'
 import { adoptPolishedChapter, parsePolishAdoptInput } from '../polish/polish-adopt.ts'
 import { normalizePolishRunRequest, type PolishRunManager } from '../polish/polish-runner.ts'
-import { createWindowPolishRunManager } from '../polish/polish-runtime.ts'
+import { createHeadlessPolishRunManager, createWindowPolishRunManager } from '../polish/polish-runtime.ts'
 import { runProjectMutation } from './agent.ts'
 
 /**
@@ -132,7 +132,10 @@ export function registerPolishIpcHandlers(): void {
     // 与 novel:save-chapter-manuscript 同一道闸：采用会连写正文、版本记录与分家标识，
     // 备份插在中间会拿到内部不一致的归档。
     return runProjectMutation(request.projectPath, () =>
-      adoptPolishedChapter(request, { openMemoryDb: openMemoryDbReadonly }),
+      adoptPolishedChapter(request, {
+        openMemoryDb: openMemoryDbReadonly,
+        verifyFacts: (originalText, polishedText) => createHeadlessPolishRunManager().verifyPolishedChapter({ slotId: request.slotId, originalText, polishedText }),
+      }),
     )
   })
 }

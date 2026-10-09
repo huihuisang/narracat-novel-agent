@@ -34,6 +34,28 @@ async function allJsonText(path: string): Promise<string> {
 }
 
 describe('agent event sink', () => {
+  test('persists a chapter receipt only for a completed memory sync checkpoint', async () => {
+    const root = await createRoot()
+    const broadcasts: AgentEventEnvelopeV1[] = []
+    const store = createAgentConversationStore({ rootDir: root, now: () => occurredAt, createSegmentId: () => segmentId })
+    const sink = createAgentEventSink({ store, broadcast: (event) => broadcasts.push(event) })
+    await sink.publish({ type: 'run.started', runId: 'receipt-run', threadId, command: 'sync-chapter-memory', prompt: '12', createdAt: occurredAt })
+    for (const [index, result] of [
+      JSON.stringify({ ok: true, chapter: 12, last_command: 'sync-chapter-memory 12', last_step: 3, manuscript_sha256: 'a'.repeat(64), private: 'SECRET_RAW_RESULT' }),
+      JSON.stringify({ ok: false, chapter: 12, manuscript_sha256: 'a'.repeat(64) }),
+      JSON.stringify({ ok: true, chapter: 12, manuscript_sha256: 'invalid' }),
+    ].entries()) {
+      const toolCallId = `receipt-${index}`
+      await sink.publish({ type: 'tool.started', runId: 'receipt-run', messageId: 'm1', toolCallId,
+        toolName: 'mcp__narracat_memory__novel_checkpoint', title: 'Complete sync', input: { chapter: 12 }, createdAt: occurredAt })
+      await sink.publish({ type: 'tool.completed', runId: 'receipt-run', toolCallId, result, createdAt: occurredAt })
+    }
+    const summaries = broadcasts.filter((event) => event.payload.type === 'run.tool-summarized')
+    expect(summaries[0]?.payload).toMatchObject({ memorySyncReceipt: { chapter: 12, manuscriptSha256: 'a'.repeat(64) } })
+    expect(summaries[1]?.payload).not.toHaveProperty('memorySyncReceipt')
+    expect(summaries[2]?.payload).not.toHaveProperty('memorySyncReceipt')
+    expect(await allJsonText(root)).not.toContain('SECRET_RAW_RESULT')
+  })
   test('commits durable events before broadcasting them', async () => {
     const order: string[] = []
     let releaseCommit!: () => void

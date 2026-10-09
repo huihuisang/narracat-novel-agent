@@ -299,9 +299,9 @@ export function detectPolishDrift(input: DetectPolishDriftInput): PolishDrift {
   }
 }
 
-/** 把漂移结果翻成贴在版本顶上的一句作者话；无漂移返回「事实未变」。 */
+/** Describe the scope of the deterministic check without certifying story facts. */
 export function describePolishDrift(drift: PolishDrift): string {
-  if (!drift.drifted) return '事实未变'
+  if (!drift.drifted) return '未发现人名、数字或段落异常，情节需核对'
 
   const parts: string[] = []
   const { detail } = drift

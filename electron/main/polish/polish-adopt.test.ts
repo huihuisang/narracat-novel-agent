@@ -5,7 +5,7 @@ import { adoptPolishedChapter, parsePolishAdoptInput } from './polish-adopt.ts'
 import { createNovelProjectFixture, writeNovelFixtureFile } from '../novel/test-novel-fixture.ts'
 import { manuscriptRevisionStore } from '../novel/manuscript-revisions.ts'
 import { readPolishSettings } from '../novel/polish-settings.ts'
-import { pendingMemorySyncPath } from '../novel/pending-memory-sync.ts'
+import { markPendingMemorySync, pendingMemorySyncPath } from '../novel/pending-memory-sync.ts'
 
 const METADATA = '<!-- chapter_metadata: {"chapter_num":13,"summary":"旧摘要"} -->'
 const VISIBLE = ['林跃把便条折了两折。', '三天后他回来了。'].join('\n')
@@ -58,6 +58,7 @@ describe('parsePolishAdoptInput', () => {
         slotId: 'slot-2',
         polishedText: '正文',
         expectedVisibleText: '旧正文',
+        factsVerified: true,
       }),
     ).toEqual({
       projectPath: '/p',
@@ -94,8 +95,8 @@ describe('parsePolishAdoptInput', () => {
   })
 })
 
-describe('无漂移（绝大多数情况）', () => {
-  test('直接采用：正文更新、元数据保留、不打红点', async () => {
+describe('Unverified prose changes', () => {
+  test('saves changed prose with a pending marker until facts are checked', async () => {
     const result = await adoptPolishedChapter({
       projectPath,
       chapter: 13,
@@ -104,11 +105,34 @@ describe('无漂移（绝大多数情况）', () => {
       expectedVisibleText: VISIBLE,
     })
 
-    expect(result).toEqual({ ok: true, outcome: { kind: 'clean' } })
+    expect(result).toEqual({ ok: true, outcome: { kind: 'pending-sync', chapter: 13 } })
     const disk = await readChapter(13)
     expect(disk).toContain('又对折')
     expect(disk).toContain(METADATA)
+    expect(await pendingSyncRaw()).toContain('"13"')
+  })
+
+  test('a semantic reversal needs synchronization even when names and numbers match', async () => {
+    await writeFile(join(projectPath, 'manuscript', 'vol-01', 'ch-013.md'), '林跃杀死了苏晚。\n')
+    const result = await adoptPolishedChapter({ projectPath, chapter: 13, slotId: 'slot-1',
+      expectedVisibleText: '林跃杀死了苏晚。', polishedText: '林跃救活了苏晚。',
+    }, { verifyFacts: async () => false })
+    expect(result).toEqual({ ok: true, outcome: { kind: 'pending-sync', chapter: 13 } })
+  })
+
+  test('a successful semantic check permits adoption without a pending marker', async () => {
+    const result = await adoptPolishedChapter({ projectPath, chapter: 13, slotId: 'slot-1',
+      expectedVisibleText: VISIBLE, polishedText: CLEAN_POLISH,
+    }, { verifyFacts: async () => true })
+    expect(result).toEqual({ ok: true, outcome: { kind: 'clean' } })
     expect(await pendingSyncRaw()).not.toContain('"13"')
+  })
+
+  test('a failed checker does not certify the rewrite', async () => {
+    const result = await adoptPolishedChapter({ projectPath, chapter: 13, slotId: 'slot-1',
+      expectedVisibleText: VISIBLE, polishedText: CLEAN_POLISH,
+    }, { verifyFacts: async () => { throw new Error('offline') } })
+    expect(result).toEqual({ ok: true, outcome: { kind: 'pending-sync', chapter: 13 } })
   })
 
   test('留下一条 llm-polish 版本记录，可退回原稿', async () => {
@@ -145,7 +169,7 @@ describe('漂移 + 最新完成章', () => {
     expect(result).toEqual({ ok: true, outcome: { kind: 'pending-sync', chapter: 13 } })
     const raw = await pendingSyncRaw()
     expect(raw).toContain('"13"')
-    expect(raw).toContain('润色改动了事实')
+    expect(raw).toContain('润色核对发现差异')
     expect((await readPolishSettings(projectPath)).divergedChapters).toEqual([])
   })
 
@@ -175,12 +199,13 @@ describe('漂移 + 旧章', () => {
     expect(result.ok).toBe(false)
     if (!result.ok) {
       expect(result.needsDivergenceAck).toBe(true)
-      expect(result.message).toContain('旧章节的改动不会进入记忆')
+      expect(result.message).toContain('旧章节暂不支持单独同步记忆')
     }
     expect(await readChapter(5)).toContain('三天后')
   })
 
   test('确认后采用并登记分家标识，且不打会点不动的红点', async () => {
+    await markPendingMemorySync(projectPath, 5, ['Legacy pending marker'])
     const result = await adoptPolishedChapter({
       projectPath,
       chapter: 5,
@@ -203,7 +228,7 @@ describe('漂移 + 旧章', () => {
       slotId: 'slot-1',
       polishedText: CLEAN_POLISH,
       expectedVisibleText: VISIBLE,
-    })
+    }, { verifyFacts: async () => true })
 
     expect(result).toEqual({ ok: true, outcome: { kind: 'clean' } })
     expect((await readPolishSettings(projectPath)).divergedChapters).toEqual([])

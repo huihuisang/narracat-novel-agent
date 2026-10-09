@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
+import { atomicWriteFile } from './atomic-write.ts'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { normalizeMaxOutputTokens } from '@shared/lib/model-output-limits'
@@ -489,8 +490,43 @@ export async function readAppConfig(configPath: string): Promise<AppConfig> {
 }
 
 export async function writeAppConfig(configPath: string, config: unknown): Promise<AppConfig> {
-  const sanitized = sanitizeConfigForDisk(config)
-  await mkdir(dirname(configPath), { recursive: true })
-  await writeFile(configPath, `${JSON.stringify(sanitized, null, 2)}\n`, 'utf-8')
-  return sanitized
+  return mutateAppConfig(configPath, () => config)
+}
+
+const configQueues = new Map<string, Promise<unknown>>()
+
+export function mutateAppConfig(
+  configPath: string,
+  mutate: (current: AppConfig) => unknown | Promise<unknown>,
+): Promise<AppConfig> {
+  const previous = configQueues.get(configPath) ?? Promise.resolve()
+  const operation = previous.catch(() => undefined).then(async () => {
+    const current = await readAppConfig(configPath)
+    const next = sanitizeConfigForDisk(await mutate(current))
+    await mkdir(dirname(configPath), { recursive: true })
+    await atomicWriteFile(configPath, `${JSON.stringify(next, null, 2)}\n`)
+    return next
+  })
+  configQueues.set(configPath, operation)
+  return operation.finally(() => {
+    if (configQueues.get(configPath) === operation) configQueues.delete(configPath)
+  })
+}
+
+export function saveProviderVerification(
+  configPath: string,
+  provider: ProviderId,
+  tested: AppConfig,
+  verifiedAt: string,
+): Promise<AppConfig> {
+  return mutateAppConfig(configPath, (current) => {
+    const before = tested.providers[provider]
+    const after = current.providers[provider]
+    if (before.baseUrl !== after.baseUrl || before.wire !== after.wire ||
+      !tested.apiKeyMetadata[provider]?.updatedAt ||
+      tested.apiKeyMetadata[provider]?.updatedAt !== current.apiKeyMetadata[provider]?.updatedAt) {
+      throw new Error('测试期间连接设置或密钥已更改，请重新测试。')
+    }
+    return markProviderVerified(current, provider, verifiedAt)
+  })
 }

@@ -26,9 +26,11 @@ describe('责任边界（ADR-0041 §2）', () => {
     }
   })
 
-  test('文案不承诺效果，只承诺事实不被改动', () => {
+  test('copy describes checks without guaranteeing preservation of facts', () => {
     expect(setupSource).toContain('改成什么样由你的要求决定')
     expect(setupSource).not.toContain('润色后更好')
+    expect(setupSource).not.toContain('事实未变')
+    expect(setupSource).toContain('请对照原稿确认')
   })
 })
 

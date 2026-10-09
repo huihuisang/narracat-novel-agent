@@ -127,6 +127,7 @@ export function createAgentRuntimeCoordinator(deps: AgentRuntimeCoordinatorDeps)
   const pendingProjectKeysByThread = new Map<string, string>()
   const projectBackupLocks = new Set<string>()
   const projectMutationCounts = new Map<string, number>()
+  const projectMutationQueues = new Map<string, Promise<unknown>>()
   const mutationResults = new Map<string, Promise<unknown>>()
 
   function rememberMutation<T>(key: string, operation: () => Promise<T>): Promise<T> {
@@ -231,6 +232,7 @@ export function createAgentRuntimeCoordinator(deps: AgentRuntimeCoordinatorDeps)
           throw projectBusyError(existing)
         }
         if (projectBackupLocks.has(projectKey)) throw projectBackupBusyError()
+        if ((projectMutationCounts.get(projectKey) ?? 0) > 0) throw projectMutationBusyError()
         if (expectedThreadId && request.threadId !== expectedThreadId) {
           throw new Error('Agent threadId 与当前小说身份不匹配。')
         }
@@ -331,13 +333,19 @@ export function createAgentRuntimeCoordinator(deps: AgentRuntimeCoordinatorDeps)
     async runProjectMutation(projectPath, operation) {
       const projectKey = await canonicalProjectKey(projectPath, deps.resolveProjectIdentity)
       if (projectBackupLocks.has(projectKey)) throw projectBackupBusyError()
+      const active = projectLocks.get(projectKey)
+      if (active) throw projectBusyError(active)
       projectMutationCounts.set(projectKey, (projectMutationCounts.get(projectKey) ?? 0) + 1)
+      const previous = projectMutationQueues.get(projectKey) ?? Promise.resolve()
+      const current = previous.catch(() => undefined).then(operation)
+      projectMutationQueues.set(projectKey, current)
       try {
-        return await operation()
+        return await current
       } finally {
         const remaining = (projectMutationCounts.get(projectKey) ?? 1) - 1
         if (remaining > 0) projectMutationCounts.set(projectKey, remaining)
         else projectMutationCounts.delete(projectKey)
+        if (projectMutationQueues.get(projectKey) === current) projectMutationQueues.delete(projectKey)
       }
     },
 

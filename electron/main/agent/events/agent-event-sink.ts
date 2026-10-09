@@ -223,6 +223,18 @@ export function createAgentEventSink(options: AgentEventSinkOptions): AgentEvent
     // 连我们也查不出 agent 读的是哪个文件（#37）。
     const roots = scrubRootsFor(run)
     if (event.type === 'tool.completed') {
+      let memorySyncReceipt: { chapter: number; manuscriptSha256: string } | undefined
+      if (tool.toolName === 'mcp__narracat_memory__novel_checkpoint') {
+        try {
+          const result = JSON.parse(event.result ?? '') as Record<string, unknown>
+          if (result.ok === true && result.last_command === `sync-chapter-memory ${result.chapter}` &&
+            (String(result.last_step) === '1' || String(result.last_step) === '3') &&
+            Number.isInteger(result.chapter) && Number(result.chapter) > 0 &&
+            typeof result.manuscript_sha256 === 'string' && /^[a-f0-9]{64}$/.test(result.manuscript_sha256)) {
+            memorySyncReceipt = { chapter: Number(result.chapter), manuscriptSha256: result.manuscript_sha256 }
+          }
+        } catch { /* An invalid tool result is not a synchronization receipt. */ }
+      }
       return {
         type: 'run.tool-summarized',
         runId: event.runId,
@@ -231,6 +243,7 @@ export function createAgentEventSink(options: AgentEventSinkOptions): AgentEvent
         toolName: tool.toolName,
         title: sanitizeDurableText(tool.title, '工具执行完成', 500),
         status: 'complete',
+        ...(memorySyncReceipt ? { memorySyncReceipt } : {}),
         summary: sanitizeDurableSummary(relativizeKnownRoots(event.summary ?? '', roots), '工具执行完成'),
         ...target,
         createdAt: event.createdAt,

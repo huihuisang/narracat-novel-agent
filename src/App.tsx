@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { HashRouter, Route, Routes } from 'react-router'
 import { Toaster } from './components/ui/sonner.tsx'
 import { TooltipProvider } from './components/ui/tooltip.tsx'
@@ -11,6 +11,7 @@ import { useTelemetryNotice } from './lib/use-telemetry-notice.ts'
 import { useReleaseGuard } from './lib/use-release-guard.ts'
 import { useTheme } from './lib/theme.ts'
 import { useAgentEventSubscription } from './lib/use-agent-events.ts'
+import { subscribePolishEvents } from './lib/polish-store.ts'
 
 const LibraryRoute = lazy(() => import('./routes/library.tsx').then((route) => ({ default: route.LibraryRoute })))
 const WorkbenchRoute = lazy(() => import('./routes/workbench.tsx').then((route) => ({ default: route.WorkbenchRoute })))
@@ -29,6 +30,7 @@ function MainApp() {
   const { effectiveTheme } = useTheme()
   // Agent 事件订阅属于 App 生命周期；路由切换不能让后台 run 暂时失去 renderer 投影消费者。
   useAgentEventSubscription()
+  useEffect(() => subscribePolishEvents(), [])
 
   return (
     <TooltipProvider>

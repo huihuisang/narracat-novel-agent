@@ -34,6 +34,7 @@ function polishOnceReturning(text: string, originalText = VISIBLE): StandingPoli
     drift: detectPolishDrift({ original: originalText, polished: text, anchorNames: ['林跃'] }),
     usage: { inputTokens: 10, outputTokens: 20 },
     originalText,
+    factsVerified: true,
   })
 }
 
@@ -52,6 +53,14 @@ afterEach(async () => {
 })
 
 describe('runStandingPolish', () => {
+  test('keeps the original when semantic verification is absent or negative', async () => {
+    await setStandingPolishSlot(projectPath, 'slot-1')
+    const result = await runStandingPolish(projectPath, {
+      polishOnce: async () => ({ ...(await polishOnceReturning(CLEAN)({ projectPath, chapter: 7, slotId: 'slot-1' })), factsVerified: false }),
+    })
+    expect(result.status).toBe('skipped')
+    expect(await readChapter7()).toContain('把便条折了两折')
+  })
   test('没开常驻时什么都不做', async () => {
     let called = false
     const result = await runStandingPolish(projectPath, {
@@ -85,7 +94,7 @@ describe('runStandingPolish', () => {
     expect(await readChapter7()).toContain('三天后')
     const outcome = (await readPolishSettings(projectPath)).standingOutcomes['7']
     expect(outcome?.status).toBe('skipped')
-    expect(outcome?.note).toContain('改动了情节')
+    expect(outcome?.note).toContain('核对发现差异')
   })
 
   test('润色报错 → 同样跳过并留下原因，不抛给调用方', async () => {

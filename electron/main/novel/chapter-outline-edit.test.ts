@@ -1,5 +1,6 @@
 // electron/main/novel/chapter-outline-edit.test.ts
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
+import { atomicWriteFile } from '../atomic-write.ts'
 import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -152,6 +153,44 @@ describe('submitChapterOutlineFieldEdit · glob 定位 + 写 json/md', () => {
   test('找不到该章 json → 失败', async () => {
     const out = await submitChapterOutlineFieldEdit({ projectPath: dir, chapter: 99, edit: edit() })
     expect(out.ok).toBe(false)
+  })
+
+  test('a Markdown write failure leaves the authoritative JSON unchanged', async () => {
+    const jsonPath = join(dir, 'outline', 'vol-01', 'ch-003.json')
+    const mdPath = join(dir, 'outline', 'vol-01', 'ch-003.md')
+    const before = await readFile(jsonPath, 'utf8')
+    await chmod(mdPath, 0o444)
+    try {
+      const result = await submitChapterOutlineFieldEdit({ projectPath: dir, chapter: 3, edit: edit() })
+      expect(result.ok).toBe(false)
+      expect(await readFile(jsonPath, 'utf8')).toBe(before)
+    } finally { await chmod(mdPath, 0o644) }
+  })
+
+  test('restores Markdown when JSON fails before replacement', async () => {
+    const jsonPath = join(dir, 'outline', 'vol-01', 'ch-003.json')
+    const mdPath = join(dir, 'outline', 'vol-01', 'ch-003.md')
+    const beforeJson = await readFile(jsonPath, 'utf8')
+    const beforeMd = await readFile(mdPath, 'utf8')
+    const result = await submitChapterOutlineFieldEdit({ projectPath: dir, chapter: 3, edit: edit() }, async (path, content) => {
+      if (path === jsonPath) throw new Error('injected JSON write failure')
+      await atomicWriteFile(path, content)
+    })
+    expect(result.ok).toBe(false)
+    expect(await readFile(jsonPath, 'utf8')).toBe(beforeJson)
+    expect(await readFile(mdPath, 'utf8')).toBe(beforeMd)
+  })
+
+  test('restores Markdown when its write reports an error after replacement', async () => {
+    const mdPath = join(dir, 'outline', 'vol-01', 'ch-003.md')
+    const before = await readFile(mdPath, 'utf8')
+    let writes = 0
+    const result = await submitChapterOutlineFieldEdit({ projectPath: dir, chapter: 3, edit: edit() }, async (path, content) => {
+      await atomicWriteFile(path, content)
+      if (++writes === 1) throw new Error('injected directory sync failure')
+    })
+    expect(result.ok).toBe(false)
+    expect(await readFile(mdPath, 'utf8')).toBe(before)
   })
 
   test('主进程渲染的 md 写入磁盘恰好单个末尾换行（无多余空行）', async () => {

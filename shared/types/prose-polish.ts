@@ -132,7 +132,7 @@ export interface PolishRunRequest {
 export type PolishRunEvent =
   | { type: 'started'; runId: string; chapter: number; slotIds: PolishSlotId[] }
   | { type: 'delta'; runId: string; slotId: PolishSlotId; text: string }
-  | { type: 'version-done'; runId: string; slotId: PolishSlotId; drift: PolishDrift; usage: PolishUsage }
+  | { type: 'version-done'; runId: string; slotId: PolishSlotId; text?: string; drift: PolishDrift; usage: PolishUsage }
   | { type: 'version-failed'; runId: string; slotId: PolishSlotId; message: string }
   | { type: 'version-aborted'; runId: string; slotId: PolishSlotId }
   | { type: 'finished'; runId: string }

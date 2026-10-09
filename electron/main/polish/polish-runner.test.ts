@@ -435,6 +435,38 @@ describe('start（试验模式）', () => {
 })
 
 describe('polishChapterOnce（常驻模式）', () => {
+  test('only an explicit complete semantic verdict certifies changed prose', async () => {
+    for (const [verdict, expected] of [
+      ['{"unchanged":true,"reason":"Same events and actors."}', true],
+      ['{"unchanged":false,"reason":"The outcome changed."}', false],
+      ['{"unchanged":"true","reason":"Same events."}', false],
+      ['{"unchanged":true}', false],
+      ['not JSON', false],
+    ] as const) {
+      const { deps } = makeDeps({}, { outputs: [ORIGINAL.replace('他问', '他问了一句'), verdict] })
+      const result = await createPolishRunManager(deps).polishChapterOnce({ projectPath: '/p', chapter: 3, slotId: 'slot-1' })
+      expect(result.factsVerified).toBe(expected)
+    }
+  })
+
+  test('a truncated or failed semantic check preserves uncertainty', async () => {
+    for (const options of [
+      { outputs: ['{"unchanged":true,"reason":"Same events."}'], stopReason: 'max_tokens' },
+      { outputs: [''], failOnCall: 0 },
+    ]) {
+      const { deps } = makeDeps({}, options)
+      expect(await createPolishRunManager(deps).verifyPolishedChapter({ slotId: 'slot-1',
+        originalText: ORIGINAL, polishedText: ORIGINAL.replace('他问', '他问了一句'),
+      })).toBe(false)
+    }
+  })
+
+  test('the completed event carries sanitized text instead of raw streaming fences', async () => {
+    const { deps, events } = makeDeps({}, { outputs: ['```text\n' + ORIGINAL + '\n```'] })
+    await createPolishRunManager(deps).start({ projectPath: '/p', chapter: 3, slotIds: ['slot-1'] })
+    await waitForFinished(events)
+    expect(events.find((event) => event.type === 'version-done')).toMatchObject({ text: ORIGINAL })
+  })
   test('返回正文与护栏结果，且一个事件都不发——没有观众', async () => {
     const { deps, events } = makeDeps()
     const manager = createPolishRunManager(deps)

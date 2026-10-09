@@ -160,7 +160,7 @@ export const usePolishRun = create<PolishRunState>((set, get) => ({
       event.type === 'delta'
         ? { ...current, status: 'streaming', text: current.text + event.text }
         : event.type === 'version-done'
-          ? { ...current, status: 'done', drift: event.drift, usage: event.usage }
+          ? { ...current, text: event.text ?? current.text, status: 'done', drift: event.drift, usage: event.usage }
           : event.type === 'version-failed'
             ? { ...current, status: 'failed', error: event.message }
             : { ...current, status: 'aborted' }

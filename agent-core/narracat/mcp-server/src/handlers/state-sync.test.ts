@@ -1,4 +1,5 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -472,6 +473,7 @@ describe("novel_restore_progress", () => {
 
     expect(result.ok).toBe(true);
     expect(result["completed_chapters"]).toEqual([2]);
+    expect(result).not.toHaveProperty("manuscript_sha256");
     expect(result["word_count_total"]).toBe(countWords("作者手改后的第二章正文。"));
     expect(String(result["message"])).toContain("进度已恢复");
 
@@ -495,9 +497,33 @@ describe("novel_restore_progress", () => {
     const result = (await novelRestoreProgress({ chapter: 0 }, ctx)) as Record<string, unknown>;
     expect(result.ok).toBe(false);
   });
+
+  it("restoring progress after failed extraction cannot issue a sync receipt", async () => {
+    const { ctx, root } = createProject();
+    writeManuscript(root, 2);
+    const result = await novelRestoreProgress({ chapter: 2 }, ctx) as Record<string, unknown>;
+    expect(result.ok).toBe(true);
+    expect(result).not.toHaveProperty("manuscript_sha256");
+  });
 });
 
 describe("novel_checkpoint", () => {
+  it("issues a manuscript-bound receipt only at a supported sync completion step", async () => {
+    const { ctx, root } = createProject();
+    writeManuscript(root, 2);
+    await novelRestoreProgress({ chapter: 2 }, ctx);
+    const incomplete = await novelCheckpoint({ command: "sync-chapter-memory", step: 3, chapter: 2 }, ctx) as Record<string, unknown>;
+    expect(incomplete).not.toHaveProperty("manuscript_sha256");
+    ctx.db.prepare("INSERT INTO chapter_summaries (id, novel_id, chapter, summary) VALUES ('s2', ?, 2, 'Summary')").run(ctx.novelId);
+    const content = await readFile(join(root, "manuscript", "vol-01", "ch-002.md"), "utf8");
+    for (const step of [1, 3]) {
+      const result = await novelCheckpoint({ command: "sync-chapter-memory 2", step, chapter: 2 }, ctx) as Record<string, unknown>;
+      expect(result.chapter).toBe(2);
+      expect(result.manuscript_sha256).toBe(createHash("sha256").update(content).digest("hex"));
+    }
+    const waiting = await novelCheckpoint({ command: "sync-chapter-memory", step: 2, chapter: 2 }, ctx) as Record<string, unknown>;
+    expect(waiting).not.toHaveProperty("manuscript_sha256");
+  });
   it("writes last_command with chapter suffix and the current step", async () => {
     const { ctx, statePath } = await createProjectFixture();
 

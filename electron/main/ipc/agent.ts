@@ -26,7 +26,7 @@ import type {
   AgentThreadSnapshotV1,
 } from '@shared/types/agent'
 import { loadNovelProjectSummary } from '../novel/novel-project.ts'
-import { clearPendingMemorySync } from '../novel/pending-memory-sync.ts'
+import { clearPendingMemorySync, verifyMemorySyncReceipt } from '../novel/pending-memory-sync.ts'
 import { openMemoryDbReadonly } from '../novel/memory-db.ts'
 import { hasAgentWriteWithinRun, runStandingPolish } from '../polish/standing-polish.ts'
 import { broadcastPolishEvent, createHeadlessPolishRunManager } from '../polish/polish-runtime.ts'
@@ -62,6 +62,7 @@ export function getAgentRuntimeCoordinator(): AgentRuntimeCoordinator {
       showNativeNotification: showNativeResultNotificationIfNeeded,
       resolveProjectName: async (projectPath) => (await loadNovelProjectSummary(projectPath)).title,
       clearPendingMemorySync,
+      verifyMemorySync: verifyMemorySyncReceipt,
       onRunTelemetryEvent: (event) => void recordRunTelemetry(event),
       // 常驻润色（ADR-0041 §8）：写完一章、记忆已入库之后，App 层追加的那一步。
       // 完全旁路——失败只落进本章的「已跳过」留痕，绝不回头影响写作链路。

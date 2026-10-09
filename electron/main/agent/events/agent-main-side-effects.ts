@@ -55,7 +55,8 @@ export interface AgentMainSideEffectsDeps {
   broadcastNotifications: (notifications: ResultNotificationList) => void
   showNativeNotification: (notification: ResultNotification) => void | Promise<void>
   resolveProjectName: (projectPath: string) => Promise<string>
-  clearPendingMemorySync: (projectPath: string, chapter: number) => Promise<void>
+  clearPendingMemorySync: (projectPath: string, chapter: number, expectedSavedAt?: string) => Promise<void>
+  verifyMemorySync?: (projectPath: string, chapter: number, manuscriptSha256: string, completedAt: string) => Promise<string | null>
   onRunTelemetryEvent?: (event: RunTelemetryEvent) => void
   /**
    * 写章节成功收场后的钩子（ADR-0041 常驻润色的挂载点）。
@@ -94,6 +95,7 @@ function activityNotification(
 
 export function createAgentMainSideEffects(deps: AgentMainSideEffectsDeps) {
   const runs = new Map<string, AgentRun>()
+  const memorySyncReceipts = new Map<string, { chapter: number; manuscriptSha256: string; completedAt: string }>()
 
   /**
    * 埋点是旁路观察者：抛异常也不许影响通知与后续副作用。
@@ -161,6 +163,11 @@ export function createAgentMainSideEffects(deps: AgentMainSideEffectsDeps) {
   }
 
   async function handleDurable(envelope: AgentEventEnvelopeV1, payload: AgentDurableEventV1): Promise<void> {
+    if (payload.type === 'run.tool-summarized' && payload.status === 'complete' &&
+      payload.toolName === 'mcp__narracat_memory__novel_checkpoint' && payload.memorySyncReceipt) {
+      memorySyncReceipts.set(payload.runId, { ...payload.memorySyncReceipt, completedAt: payload.createdAt })
+      return
+    }
     if (payload.type === 'run.accepted') {
       runs.set(payload.runId, {
         id: payload.runId,
@@ -221,6 +228,7 @@ export function createAgentMainSideEffects(deps: AgentMainSideEffectsDeps) {
 
     const run = runFor(payload.runId, envelope.threadId, payload.createdAt)
     if (payload.type === 'run.cancelled') {
+      memorySyncReceipts.delete(payload.runId)
       const cancelled = activityNotification(
         { ...run, status: 'cancelled', finishedAt: payload.createdAt },
         'cancelling',
@@ -284,9 +292,13 @@ export function createAgentMainSideEffects(deps: AgentMainSideEffectsDeps) {
     ) {
       const projectPath = run.projectPath
       const selectedChapter = run.selectedChapter
-      operations.push(() =>
-        retryOnce(() => deps.clearPendingMemorySync(projectPath, selectedChapter)),
-      )
+      const receipt = memorySyncReceipts.get(payload.runId)
+      if (receipt?.chapter === selectedChapter && deps.verifyMemorySync) {
+        operations.push(async () => {
+          const savedAt = await deps.verifyMemorySync!(projectPath, selectedChapter, receipt.manuscriptSha256, receipt.completedAt)
+          if (savedAt !== null) await retryOnce(() => deps.clearPendingMemorySync(projectPath, selectedChapter, savedAt))
+        })
+      }
     }
     // recover-write 与 write-next 同样产出正文（两条 run 路径都标 manuscriptRevisionSource:
     // 'agent-write'），只判前者会让「恢复写作」写出来的新章拿不到常驻润色。
@@ -305,7 +317,11 @@ export function createAgentMainSideEffects(deps: AgentMainSideEffectsDeps) {
       } catch {}
     }
     operations.push(() => deps.showNativeNotification(notification))
-    await runIndependentSideEffects(operations)
+    try {
+      await runIndependentSideEffects(operations)
+    } finally {
+      memorySyncReceipts.delete(payload.runId)
+    }
 
     if (runs.size > 512) runs.delete(runs.keys().next().value!)
   }

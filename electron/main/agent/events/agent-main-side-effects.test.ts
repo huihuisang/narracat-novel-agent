@@ -22,6 +22,34 @@ function envelope(
 }
 
 describe('agent main-process side effects', () => {
+  test('normal completion without a matching verified receipt keeps the pending marker', async () => {
+    for (const receiptChapter of [null, 11, 12]) {
+      let cleared = false
+      const handle = createAgentMainSideEffects({
+        upsertNotification: async () => ({ notifications: [], totalCount: 0, unreadCount: 0 }),
+        markNotificationRead: async () => ({ notifications: [], totalCount: 0, unreadCount: 0 }),
+        broadcastNotifications() {}, showNativeNotification() {}, resolveProjectName: async () => 'Book',
+        clearPendingMemorySync: async () => { cleared = true }, verifyMemorySync: async () => null,
+      })
+      await handle(envelope(1, 'transient', { type: 'run.started', runId: 'run-1', threadId: 'novel:stars',
+        command: 'sync-chapter-memory', prompt: '12', projectPath: '/novels/stars', selectedChapter: 12, createdAt: '2026-07-24T12:00:00.000Z' }))
+      if (receiptChapter !== null) await handle(envelope(2, 'durable', {
+        type: 'run.tool-summarized', runId: 'run-1', messageId: 'm1', toolCallId: 'sync-1',
+        toolName: 'mcp__narracat_memory__novel_checkpoint', title: 'Complete sync', status: 'complete',
+        memorySyncReceipt: { chapter: receiptChapter, manuscriptSha256: 'a'.repeat(64) }, createdAt: '2026-07-24T12:01:00.000Z',
+      }))
+      await handle(envelope(3, 'durable', { type: 'run.completed', runId: 'run-1', assistantText: 'Done', createdAt: '2026-07-24T12:02:00.000Z' }))
+      expect(cleared).toBe(false)
+    }
+  })
+  async function syncReceipt(handle: ReturnType<typeof createAgentMainSideEffects>, seq: number) {
+    await handle(envelope(seq, 'durable', {
+      type: 'run.tool-summarized', runId: 'run-1', messageId: 'm1', toolCallId: 'sync-1',
+      toolName: 'mcp__narracat_memory__novel_checkpoint', title: 'Complete sync', status: 'complete',
+      memorySyncReceipt: { chapter: 12, manuscriptSha256: 'a'.repeat(64) },
+      createdAt: '2026-07-24T12:02:30.000Z',
+    }))
+  }
   test('evolves one notification through running/waiting/running/success and clears memory sync without renderer', async () => {
     const notifications = new Map<string, ResultNotification>()
     const statuses: string[] = []
@@ -51,6 +79,7 @@ describe('agent main-process side effects', () => {
       async clearPendingMemorySync(projectPath, chapter) {
         cleared.push([projectPath, chapter])
       },
+      verifyMemorySync: async () => 'pending-generation',
     })
 
     await handle(
@@ -104,8 +133,9 @@ describe('agent main-process side effects', () => {
         createdAt: '2026-07-24T12:02:00.000Z',
       }),
     )
+    await syncReceipt(handle, 5)
     await handle(
-      envelope(5, 'durable', {
+      envelope(6, 'durable', {
         type: 'run.completed',
         runId: 'run-1',
         assistantText: '同步完成。',
@@ -175,6 +205,7 @@ describe('agent main-process side effects', () => {
       async clearPendingMemorySync(projectPath, chapter) {
         cleared.push([projectPath, chapter])
       },
+      verifyMemorySync: async () => 'pending-generation',
     })
 
     await handle(
@@ -200,9 +231,10 @@ describe('agent main-process side effects', () => {
       }),
     ).catch(() => undefined)
 
+    await syncReceipt(handle, 3)
     await expect(
       handle(
-        envelope(3, 'durable', {
+        envelope(4, 'durable', {
           type: 'run.completed',
           runId: 'run-1',
           assistantText: '同步完成。',

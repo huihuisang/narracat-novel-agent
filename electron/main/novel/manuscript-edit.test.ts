@@ -12,6 +12,8 @@ import {
 } from './manuscript-edit.ts'
 import { manuscriptRevisionStore } from './manuscript-revisions.ts'
 import { createNovelProjectFixture } from './test-novel-fixture.ts'
+import { readPolishSettings } from './polish-settings.ts'
+import { readPendingMemorySync } from './pending-memory-sync.ts'
 
 const METADATA_COMMENT = '<!-- chapter_metadata: {"chapter_num":13,"summary":"旧摘要"} -->'
 const VISIBLE = ['林昭推开门，屋里一片漆黑。', '', '他摸索着点燃了油灯。'].join('\n')
@@ -81,6 +83,17 @@ describe('submitManuscriptEdit · 真实文件读写', () => {
 
   test('locateManuscriptFile 命中 vol 目录零填充路径', async () => {
     expect(await locateManuscriptFile(projectPath, 13)).toBe(join(projectPath, 'manuscript', 'vol-01', 'ch-013.md'))
+  })
+
+  test('an older chapter edit records divergence instead of an unsupported sync action', async () => {
+    await writeFile(join(projectPath, '.narracat', 'state.yaml'), 'progress:\n  completed_chapters: [13, 14]\n  last_completed_chapter: 14\n')
+    await writeFile(join(projectPath, 'manuscript', 'vol-01', 'ch-014.md'), 'The next chapter.\n')
+    const result = await submitManuscriptEdit({ projectPath, chapter: 13, expectedVisibleText: VISIBLE,
+      newVisibleText: '林昭死在了门外。',
+    }, { classify: () => ({ tier: 'impact', reasons: ['Event changed'], stats: { addedChars: 0, removedChars: 0 }, hunks: [] }) })
+    expect(result.ok).toBe(true)
+    expect((await readPolishSettings(projectPath)).divergedChapters).toContain(13)
+    expect(await readPendingMemorySync(projectPath)).not.toHaveProperty('13')
   })
 
   test('locateManuscriptFile 兼容 legacy 扁平非补零路径', async () => {

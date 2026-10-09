@@ -236,7 +236,7 @@ export function PolishPanel({
       if (!result.ok) {
         if (result.needsDivergenceAck) {
           const confirmed = await confirm({
-            title: '这一版改动了情节',
+            title: '这一版可能改动了情节',
             description: '旧章节的改动不会进入记忆，后续创作仍按原来的情节走。这一章的正文与记忆会从此对不上。',
             confirmLabel: '仍然采用',
           })

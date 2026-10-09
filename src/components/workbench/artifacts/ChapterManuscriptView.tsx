@@ -35,7 +35,7 @@ import {
   useManuscriptEditorGuard,
 } from '@/lib/manuscript-editor-guard'
 import { usePendingMemorySyncMap } from '@/lib/use-pending-memory-sync'
-import { subscribePolishEvents, usePolishRun } from '@/lib/polish-store'
+import { usePolishRun } from '@/lib/polish-store'
 import type { NovelArtifact } from '@shared/types/novel'
 import type { ManuscriptDraftState } from '@shared/types/manuscript-draft'
 import type { ProjectPolishSettings } from '@shared/types/prose-polish'
@@ -96,9 +96,6 @@ export function ChapterManuscriptView({
   const pendingMap = usePendingMemorySyncMap(projectPath, `${agentBusy}:${saveCount}`)
   const pending = pendingMap[String(chapter)]
 
-  // 润色版本活在正文页（ADR-0041 §10），故事件订阅挂在这里，不挂在配置弹窗上：
-  // 弹窗一关就断订阅的话，跑到一半的版本会永远停在「排队中」。
-  useEffect(() => subscribePolishEvents(), [])
   const standingVersion = usePolishRun((state) => state.standingVersion)
 
   // 常驻润色改的是正文文件本身，而正文是父组件传下来的 artifact.content——只重读设置的话，
@@ -458,11 +455,11 @@ export function ChapterManuscriptView({
           data-manuscript-diverged="true"
         >
           <p className="text-sm text-muted-foreground">
-            这一章的正文被润色改过情节，记忆库仍按原来的情节记着。后续创作以记忆里的版本为准。
+            这一章的正文已修改，记忆尚未同步。旧章暂不支持单独同步，后续创作仍使用原来的剧情记录。
           </p>
         </div>
       )}
-      {pending && (
+      {pending && !diverged && (
         <div
           className="mb-3 flex items-center justify-between gap-3 rounded-row border border-border bg-surface px-3 py-2"
           data-pending-memory-sync-banner="true"
@@ -502,7 +499,7 @@ export function ChapterManuscriptView({
       )}
       {/* 整章三千字要滚好几屏；读到底部想回头改提示词、切别的版本，不该靠一路滚回去。 */}
       {polishActive && <BackToTopButton />}
-      {impactReasons && (
+      {impactReasons && !diverged && (
         <ImpactEvaluationDock
           title="记忆待同步"
           message="这次正文改动可能影响已入库的记忆与后续章节，建议评估并同步。"

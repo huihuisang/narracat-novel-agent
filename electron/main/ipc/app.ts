@@ -5,13 +5,13 @@ import {
   findUnsafeApiKeyCharacter,
   hasConfiguredApiKey,
   markProviderApiKeyUpdated,
-  markProviderVerified,
   normalizeAppConfig,
   PROVIDER_IDS,
   type AppConfig,
   type ProviderId,
   UNSAFE_API_KEY_MESSAGE,
-  writeAppConfig,
+  mutateAppConfig,
+  saveProviderVerification,
 } from '../config.ts'
 import { deleteApiKey, getApiKey, hasApiKey, setApiKey } from '../secrets.ts'
 import { testProviderConnection, type ConnectionTestResult } from '../provider-test.ts'
@@ -195,7 +195,14 @@ export function registerAppIpcHandlers(): void {
 
   ipcMain.handle('config:save', async (_event, input: unknown): Promise<AppConfigPayload> => {
     const previous = await readCurrentConfig()
-    const saved = await writeAppConfig(configPath(), normalizeAppConfig(input))
+    const saved = await mutateAppConfig(configPath(), (current) => {
+      const requested = normalizeAppConfig(input)
+      return { ...requested, apiKeyMetadata: current.apiKeyMetadata,
+        modelPool: requested.modelPool.map((entry) => ({ ...entry,
+          verification: current.modelPool.find((item) => item.provider === entry.provider && item.modelId === entry.modelId)?.verification ?? null,
+        })),
+      }
+    })
     if (sessionConfigBasis(previous) !== sessionConfigBasis(saved)) {
       await invalidateAgentSessions('model-service-changed')
     }
@@ -208,7 +215,10 @@ export function registerAppIpcHandlers(): void {
     if (!key || !canSetPrimaryModel(previous, key)) {
       throw new Error('该模型不可用或未验证，请先到设置页测试连接。')
     }
-    const saved = await writeAppConfig(configPath(), { ...previous, primaryModelKey: key })
+    const saved = await mutateAppConfig(configPath(), (current) => {
+      if (!canSetPrimaryModel(current, key)) throw new Error('该模型不可用或未验证，请先到设置页测试连接。')
+      return { ...current, primaryModelKey: key }
+    })
     if (sessionConfigBasis(previous) !== sessionConfigBasis(saved)) {
       await invalidateAgentSessions('model-service-changed')
     }
@@ -219,9 +229,12 @@ export function registerAppIpcHandlers(): void {
     if (!input || typeof input !== 'object') throw new Error('API Key 参数非法。')
     const { provider, apiKey } = input as Record<string, unknown>
     if (!isProviderId(provider) || typeof apiKey !== 'string') throw new Error('API Key 参数非法。')
-    await setApiKey(provider, apiKey)
-    const config = await readCurrentConfig()
-    await writeAppConfig(configPath(), markProviderApiKeyUpdated(config, provider, new Date().toISOString()))
+    await mutateAppConfig(configPath(), async (current) => {
+      await setApiKey(provider, apiKey)
+      const previousAt = Date.parse(current.apiKeyMetadata[provider]?.updatedAt ?? '')
+      const updatedAt = new Date(Math.max(Date.now(), Number.isFinite(previousAt) ? previousAt + 1 : 0)).toISOString()
+      return markProviderApiKeyUpdated(current, provider, updatedAt)
+    })
     await invalidateAgentSessions('api-key-changed')
     // 刚写入成功，结果确定为 true——无需再读钥匙串（避免在写后又触发一次系统授权）。
     return { hasApiKey: true }
@@ -229,9 +242,10 @@ export function registerAppIpcHandlers(): void {
 
   ipcMain.handle('secret:delete-api-key', async (_event, provider: unknown): Promise<{ hasApiKey: boolean }> => {
     if (!isProviderId(provider)) throw new Error('Provider 参数非法。')
-    await deleteApiKey(provider)
-    const config = await readCurrentConfig()
-    await writeAppConfig(configPath(), clearProviderApiKeyMetadata(config, provider))
+    await mutateAppConfig(configPath(), async (current) => {
+      await deleteApiKey(provider)
+      return clearProviderApiKeyMetadata(current, provider)
+    })
     await invalidateAgentSessions('api-key-changed')
     // 刚删除成功，结果确定为 false——无需再读钥匙串。
     return { hasApiKey: false }
@@ -244,16 +258,20 @@ export function registerAppIpcHandlers(): void {
 
   ipcMain.handle('provider:test-connection', async (_event, input: unknown): Promise<ConnectionTestResult> => {
     if (!isProviderId(input)) return { ok: false, message: 'Provider 参数非法。' }
-    let config = await readCurrentConfig()
+    let apiKey: string | null = null
+    let migrated = false
+    const config = await mutateAppConfig(configPath(), async (current) => {
+      if (!current.modelPool.some((entry) => entry.provider === input)) return current
+      apiKey = await getApiKey(input)
+      if (!apiKey || findUnsafeApiKeyCharacter(apiKey) || current.apiKeyMetadata[input]?.updatedAt) return current
+      migrated = true
+      return markProviderApiKeyUpdated(current, input, new Date().toISOString())
+    })
     const entries = config.modelPool.filter((entry) => entry.provider === input)
     if (entries.length === 0) return { ok: false, message: '请先启用至少一个模型再测试。' }
-    const apiKey = await getApiKey(input)
     if (!apiKey) return { ok: false, message: '请先保存该服务商的 API Key。' }
     if (findUnsafeApiKeyCharacter(apiKey)) return { ok: false, message: UNSAFE_API_KEY_MESSAGE }
-    if (!config.apiKeyMetadata[input]?.updatedAt) {
-      config = await writeAppConfig(configPath(), markProviderApiKeyUpdated(config, input, new Date().toISOString()))
-      await invalidateAgentSessions('api-key-changed')
-    }
+    if (migrated) await invalidateAgentSessions('api-key-changed')
 
     const result = await testProviderConnection(config, apiKey, modelEntryKey(entries[0]!), {
       appRoot: app.getAppPath(),
@@ -263,7 +281,11 @@ export function registerAppIpcHandlers(): void {
     if (!result.ok) return result
 
     const verifiedAt = new Date().toISOString()
-    await writeAppConfig(configPath(), markProviderVerified(config, input, verifiedAt))
+    try {
+      await saveProviderVerification(configPath(), input, config, verifiedAt)
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : '保存连接测试结果失败。' }
+    }
     return { ...result, verifiedAt }
   })
 

@@ -1,13 +1,4 @@
-/**
- * 常驻润色（ADR-0041 §8）：写完一章之后，App 层自动追加的那一步。
- *
- * 位置是刻意的——它跑在 `/narracat:write` **整条命令跑完之后**，所以记忆入库的永远是未润色的
- * 原始版，润色改坏文字的爆炸半径被封死在正文文字层。引擎一个字都不用改。
- *
- * 只有两种结局：**润好了覆盖**，或**原稿原封不动**。任何异常（漂移、报错、配方为空、模型没配）
- * 一律回到后者——常驻模式没有观众，没人看着的时候默认保守。跳过一定留痕，静默跳过会变成
- * 「怎么好几章没润色」的哑谜。
- */
+/** Apply standing polish after writing. Keep the original if deterministic or semantic checks fail. */
 import { describePolishDrift } from '@shared/lib/prose-polish-drift'
 import type { ManuscriptRevisionEntry } from '@shared/types/manuscript-revision'
 import { adoptPolishedChapter } from './polish-adopt.ts'
@@ -106,8 +97,9 @@ export async function runStandingPolish(
 
   if (result.drift.drifted) {
     // 常驻的前提是这套配方在试验阶段验证过；突发漂移即异常，默认保守。
-    return skip(`这次的润色改动了情节（${describePolishDrift(result.drift)}），已保留原稿`)
+    return skip(`润色核对发现差异（${describePolishDrift(result.drift)}），已保留原稿`)
   }
+  if (!result.factsVerified) return skip('情节核对未通过或未完成，已保留原稿')
 
   const withLock = deps.withProjectLock ?? (async (_path, operation) => operation())
   const adopted = await withLock(projectPath, () =>
@@ -121,7 +113,7 @@ export async function runStandingPolish(
         // 生成期间的手改当成基线，乐观锁形同虚设，A′ 会直接盖掉 B。
         expectedVisibleText: result.originalText,
       },
-      { openMemoryDb: deps.openMemoryDb },
+      { openMemoryDb: deps.openMemoryDb, factsVerified: result.factsVerified },
     ),
   )
   if (!adopted.ok) return skip(adopted.message)

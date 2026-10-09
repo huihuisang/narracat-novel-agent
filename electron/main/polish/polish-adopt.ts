@@ -1,26 +1,14 @@
-/**
- * 采用某一版润色（ADR-0041 §7）。
- *
- * 写入完全复用正文直写管线（定位 → 乐观锁 → 元数据以磁盘版拼回 → 版本捕获 → 原子落盘），
- * 只换掉两处接缝：判据用润色护栏，impact 处置按章龄分流。
- *
- * 三分支：
- * | 情形 | 处置 |
- * |---|---|
- * | 无漂移（绝大多数） | 直接采用，记忆不动，不打红点 |
- * | 漂移 + 最新完成章 | 采用 + 打「记忆待同步」标记 → 走 /narracat:sync-chapter-memory |
- * | 漂移 + 旧章 | 需作者先确认，采用后登记「正文与记忆分家」——sync 不收旧章，rewrite 会抹掉
- *   作者刚润出的版本，确实没有出口，所以那是个纯陈述标识，不配任何按钮 |
- */
+/** Reuse the manuscript save path. Unverified changes require memory synchronization or an old-chapter warning. */
 import { detectPolishDrift, describePolishDrift } from '@shared/lib/prose-polish-drift'
 import type { PolishAdoptOutcome, PolishAdoptRequest } from '@shared/types/prose-polish'
 import { isPolishSlotId } from '@shared/types/prose-polish'
 import type { OpenMemoryDb } from '../novel/memory-db.ts'
 import { collectManuscriptEntityNames } from '../novel/manuscript-entities.ts'
 import { submitManuscriptEdit, type ManuscriptSaveResult } from '../novel/manuscript-edit.ts'
-import { markPendingMemorySync } from '../novel/pending-memory-sync.ts'
+import { clearPendingMemorySync, markPendingMemorySync } from '../novel/pending-memory-sync.ts'
 import { markChapterDiverged } from '../novel/polish-settings.ts'
 import { readWrittenChapterSet } from '../novel/novel-project.ts'
+import { normalizeManuscriptText } from '../novel/manuscript-file.ts'
 import type { ManuscriptTriage } from '../novel/manuscript-triage.ts'
 
 export type PolishAdoptResult =
@@ -62,7 +50,11 @@ async function isLatestCompletedChapter(projectPath: string, chapter: number): P
 
 export async function adoptPolishedChapter(
   request: PolishAdoptRequest,
-  { openMemoryDb }: { openMemoryDb?: OpenMemoryDb } = {},
+  { openMemoryDb, factsVerified = false, verifyFacts }: {
+    openMemoryDb?: OpenMemoryDb
+    factsVerified?: boolean
+    verifyFacts?: (originalText: string, polishedText: string) => Promise<boolean>
+  } = {},
 ): Promise<PolishAdoptResult> {
   const anchorNames = await collectManuscriptEntityNames({ projectPath: request.projectPath, openMemoryDb }).catch(
     () => [] as string[],
@@ -73,20 +65,24 @@ export async function adoptPolishedChapter(
     anchorNames,
   })
 
-  const latest = drift.drifted ? await isLatestCompletedChapter(request.projectPath, request.chapter) : true
+  const textChanged = normalizeManuscriptText(request.expectedVisibleText) !== normalizeManuscriptText(request.polishedText)
+  const verified = !textChanged || (!drift.drifted && (factsVerified ||
+    (verifyFacts ? await verifyFacts(request.expectedVisibleText, request.polishedText).catch(() => false) : false)))
+  const needsSync = drift.drifted || !verified
+  const latest = needsSync ? await isLatestCompletedChapter(request.projectPath, request.chapter) : true
 
-  // 旧章的漂移版会让正文与记忆永久分家，作者必须先看到这句话再决定。
-  if (drift.drifted && !latest && !request.divergenceAcknowledged) {
+  // Old chapters cannot use the current sync command. Show the consequence before saving.
+  if (needsSync && !latest && !request.divergenceAcknowledged) {
     return {
       ok: false,
       needsDivergenceAck: true,
-      message: '这一版改动了情节。旧章节的改动不会进入记忆，后续创作仍按原来的情节走。',
+      message: '这一版可能改动了情节。旧章节暂不支持单独同步记忆，后续创作仍按原来的剧情记录走。',
     }
   }
 
   const triage: ManuscriptTriage = {
-    tier: drift.drifted ? 'impact' : 'silent',
-    reasons: drift.drifted ? [`润色改动了事实：${describePolishDrift(drift)}`] : [],
+    tier: needsSync ? 'impact' : 'silent',
+    reasons: drift.drifted ? [`润色核对发现差异：${describePolishDrift(drift)}`] : needsSync ? ['润色后的情节未通过核对，建议同步记忆'] : [],
     stats: { addedChars: 0, removedChars: 0 },
     hunks: [],
   }
@@ -110,13 +106,14 @@ export async function adoptPolishedChapter(
           return
         }
         await markChapterDiverged(projectPath, chapter)
+        await clearPendingMemorySync(projectPath, chapter)
       },
     },
   )
 
   if (!saved.ok) return saved
 
-  if (!drift.drifted) return { ok: true, outcome: { kind: 'clean' } }
+  if (!needsSync) return { ok: true, outcome: { kind: 'clean' } }
   return {
     ok: true,
     outcome: latest

@@ -12,8 +12,8 @@ polish configuration and result delivery, model settings, character chat,
 archive restore, window setup, and update lifecycle. This is a review of the
 main paths, not an exhaustive audit of every file or a security certification.
 
-The findings below remain open. No business implementation was changed in
-this task. Two stale tests from the preceding prompt edits were corrected:
+The findings below describe the review baseline. The review itself did not
+change business implementation. Two stale tests from the preceding prompt edits were corrected:
 the writer input contract includes explicitly supplied rewrite context, and
 the craft delivery test now compares the actual source text instead of a
 removed slogan. The full App suite then passed: 3,884 tests in 363 files.
@@ -29,6 +29,58 @@ read or changed. Probe source and output are local audit evidence:
 - `/Users/huisang/Documents/Codex/2026-10-08/1-v3-17-v3-17-17-2/work/app-audit-probes.test.ts`
 - `/tmp/narracat-app-audit-probes.log`
 - `/tmp/narracat-app-audit-tests-final.log`
+
+## Repair status (2026-10-09)
+
+F1–F8 are repaired in source. These are separate from the baseline observations below.
+
+- F1: project mutations run in one queue per canonical project. Saves and
+  Agent runs exclude each other; stale queued edits fail the manuscript baseline check.
+- F2: a normal Agent ending cannot clear a pending marker. A completed
+  `novel_checkpoint` for sync step 1 or 3 supplies a manuscript SHA-256 only
+  when the chapter is the latest completed chapter and has a stored summary.
+  The App compares current bytes and pending-marker generation before clearing.
+  Progress restoration after failed extraction supplies no receipt. Older
+  manual edits record divergence and do not offer the unsupported sync route.
+- F3: config mutations read and merge under one queue and write atomically.
+  Connection verification checks current endpoint, protocol, and key generation;
+  other settings are preserved. Secret updates and the tested config/key snapshot
+  use the same queue.
+- F4: deterministic checks describe only name, number, and paragraph differences.
+  A separate model check compares events and relations before clean adoption.
+  Automatic polish retains the original if either check fails or is uncertain.
+  Manual adoption of unverified changes records pending synchronization or,
+  after confirmation for an old chapter, divergence. The model check is a
+  precaution, not a guarantee of factual equivalence or writing quality.
+- F5–F7: App owns the polish event subscription across routes. Completion
+  delivers sanitized full text. Starting a run waits for selected recipes to
+  save; a failed save blocks generation and pending inputs are disabled.
+- F8: render both outline outputs before writing. Save Markdown then JSON
+  atomically per file. If JSON replacement fails, restore the previous Markdown;
+  handle failures reported after rename and report failed compensation explicitly.
+  This handles write failures, not a process crash between the two replacements.
+
+Regression evidence uses temporary projects, fake model streams, and injected
+write failures. Real Electron UI smoke uses real preload/IPC and a controlled
+polish handler: delayed saves block start, failed saves block generation, route
+changes retain late results, and completed text replaces raw streaming fences.
+It does not contact a provider or use author credentials. Source:
+`/tmp/narracat-fixes-smoke.mjs`; final result: `/tmp/narracat-electron-fixes-final.log`.
+
+The final smoke also saves an older chapter through real IPC and checks that
+the divergence notice replaces the unsupported synchronization action.
+Screenshot: `/var/folders/ts/hzd8hfd51dxcv464vhbgs9_80000gn/T/narracat-fixes-ui-aj9RWA/polish-result-after-navigation.png`.
+
+Verification: 3,904 App tests and 70 engine state-sync tests pass. Type,
+architecture, prose-block, and design checks pass; the development build
+succeeds. Real Electron memory smoke passes utility-process RPC, core runtime
+loading, SQLite vector support, and the offline embedding self-test. Logs are
+`/tmp/narracat-all-fixes.log`, `/tmp/narracat-core-fixes.log`, and
+`/tmp/narracat-memory-fixes.log`. `ops:check` still reports the same eight
+pre-existing documentation issues in ADR-0036, ADR-0037, and historical progress.
+
+The installed App has not been replaced. No live-provider writing evaluation,
+release package, or deployment is part of this repair.
 
 ## Findings
 

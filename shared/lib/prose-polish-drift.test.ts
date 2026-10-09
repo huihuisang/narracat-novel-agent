@@ -70,7 +70,7 @@ describe('detectPolishDrift', () => {
     const result = drift(original, polished)
     expect(result.drifted).toBe(false)
     expect(result.signals).toEqual([])
-    expect(describePolishDrift(result)).toBe('事实未变')
+    expect(describePolishDrift(result)).toBe('未发现人名、数字或段落异常，情节需核对')
   })
 
   test('已知角色整个消失 → 专名漂移', () => {

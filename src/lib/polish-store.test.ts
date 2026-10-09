@@ -46,6 +46,14 @@ beforeEach(() => {
 })
 
 describe('applyEvent', () => {
+  test('uses completed clean text even when the stream contains code fences', () => {
+    apply(
+      { type: 'started', runId: 'clean-result', chapter: 1, slotIds: ['slot-1'] },
+      { type: 'delta', runId: 'clean-result', slotId: 'slot-1', text: '```text\n正文。\n```' },
+      { type: 'version-done', runId: 'clean-result', slotId: 'slot-1', text: '正文。', drift: CLEAN_DRIFT, usage: {} },
+    )
+    expect(usePolishRun.getState().versions['slot-1']?.text).toBe('正文。')
+  })
   test('started 建立本轮的槽位与顺序', () => {
     apply({ type: 'started', runId: 'r1', chapter: 7, slotIds: ['slot-1', 'slot-3'] })
     const state = usePolishRun.getState()

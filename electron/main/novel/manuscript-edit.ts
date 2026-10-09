@@ -3,7 +3,9 @@ import { join } from 'node:path'
 import { atomicWriteFile } from '../atomic-write.ts'
 import { NARRACAT_DIR } from './novel-layout.ts'
 import { collectManuscriptEntityNames } from './manuscript-entities.ts'
-import { markPendingMemorySync } from './pending-memory-sync.ts'
+import { clearPendingMemorySync, markPendingMemorySync } from './pending-memory-sync.ts'
+import { readWrittenChapterSet } from './novel-project.ts'
+import { markChapterDiverged } from './polish-settings.ts'
 import { triageManuscriptEdit, type ManuscriptTriage } from './manuscript-triage.ts'
 import type { OpenMemoryDb } from './memory-db.ts'
 import type {
@@ -222,7 +224,11 @@ export async function submitManuscriptEdit(
       if (onImpact) {
         await onImpact({ projectPath: request.projectPath, chapter: request.chapter, triage })
       } else {
-        await markPendingMemorySync(request.projectPath, request.chapter, triage.reasons)
+        const completed = await readWrittenChapterSet(request.projectPath)
+        if (completed.size > 0 && request.chapter < Math.max(...completed)) {
+          await markChapterDiverged(request.projectPath, request.chapter)
+          await clearPendingMemorySync(request.projectPath, request.chapter)
+        } else await markPendingMemorySync(request.projectPath, request.chapter, triage.reasons)
       }
     } catch (error) {
       console.error('[manuscript-edit] impact 处置失败', error)

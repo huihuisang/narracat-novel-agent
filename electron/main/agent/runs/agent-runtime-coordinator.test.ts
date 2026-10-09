@@ -95,6 +95,51 @@ async function makeHarness() {
 }
 
 describe('agent runtime coordinator', () => {
+  test('serializes project mutations and rejects a stale second save', async () => {
+    const { coordinator } = await makeHarness()
+    let release!: () => void
+    let entered!: () => void
+    const enteredGate = new Promise<void>((resolve) => { entered = resolve })
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    let text = 'original'
+    const first = coordinator.runProjectMutation('/novels/stars', async () => {
+      const baseline = text
+      entered()
+      await gate
+      if (baseline !== text) return false
+      text = 'first'
+      return true
+    })
+    await enteredGate
+    const second = coordinator.runProjectMutation('/novels/stars', async () => {
+      if (text !== 'original') return false
+      text = 'second'
+      return true
+    })
+    await Promise.resolve()
+    release()
+    expect(await first).toBe(true)
+    expect(await second).toBe(false)
+    expect(text).toBe('first')
+  })
+
+  test('excludes Agent starts during a pending save and saves during an Agent run', async () => {
+    const { coordinator, publish } = await makeHarness()
+    let entered!: () => void
+    let release!: () => void
+    const startedSave = new Promise<void>((resolve) => { entered = resolve })
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const mutation = coordinator.runProjectMutation('/novels/stars', async () => { entered(); await gate })
+    await startedSave
+    const request = { requestId: 'during-save', threadId: 'novel:stars', command: 'freeform' as const, prompt: 'test', projectPath: '/novels/stars' }
+    await expect(coordinator.startRun(request)).rejects.toThrow('保存')
+    release()
+    await mutation
+    const run = await coordinator.startRun({ ...request, requestId: 'after-save' })
+    await expect(coordinator.runProjectMutation('/novels/stars', async () => 'saved')).rejects.toThrow('Agent')
+    await publish({ type: 'run.completed', runId: run.runId, createdAt: '2026-07-24T12:01:00.000Z' })
+    await expect(coordinator.runProjectMutation('/novels/stars', async () => 'saved')).resolves.toBe('saved')
+  })
   test('deduplicates start mutations and holds one lock per novel across renderer threads', async () => {
     const harness = await makeHarness()
     const request = {

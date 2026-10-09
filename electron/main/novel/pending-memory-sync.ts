@@ -1,5 +1,7 @@
 import { mkdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { locateManuscriptFile } from './manuscript-file.ts'
 import { atomicWriteFile } from '../atomic-write.ts'
 import { NARRACAT_DIR } from './novel-layout.ts'
 
@@ -89,17 +91,35 @@ function mutatePendingMemorySync(
 
 export async function markPendingMemorySync(projectPath: string, chapter: number, reasons: string[]): Promise<void> {
   await mutatePendingMemorySync(projectPath, (map) => {
-    map[String(chapter)] = { savedAt: new Date().toISOString(), reasons }
+    const previous = Date.parse(map[String(chapter)]?.savedAt ?? '')
+    const timestamp = Number.isFinite(previous) ? Math.max(Date.now(), previous + 1) : Date.now()
+    map[String(chapter)] = { savedAt: new Date(timestamp).toISOString(), reasons }
     return true
   })
 }
 
-export async function clearPendingMemorySync(projectPath: string, chapter: number): Promise<void> {
+export async function clearPendingMemorySync(projectPath: string, chapter: number, expectedSavedAt?: string): Promise<void> {
   await mutatePendingMemorySync(projectPath, (map) => {
     if (!(String(chapter) in map)) return false
+    if (expectedSavedAt !== undefined && map[String(chapter)].savedAt !== expectedSavedAt) return false
     delete map[String(chapter)]
     return true
   })
+}
+
+export async function verifyMemorySyncReceipt(
+  projectPath: string,
+  chapter: number,
+  manuscriptSha256: string,
+  completedAt: string,
+): Promise<string | null> {
+  const pending = (await readPendingMemorySync(projectPath))[String(chapter)]
+  if (!pending || !Number.isFinite(Date.parse(pending.savedAt)) ||
+    !Number.isFinite(Date.parse(completedAt)) || Date.parse(pending.savedAt) > Date.parse(completedAt)) return null
+  const file = await locateManuscriptFile(projectPath, chapter)
+  if (!file) return null
+  const actual = createHash('sha256').update(await readFile(file, 'utf8'), 'utf8').digest('hex')
+  return actual === manuscriptSha256 ? pending.savedAt : null
 }
 
 export function parseClearPendingMemorySyncInput(input: unknown): { projectPath: string; chapter: number } {

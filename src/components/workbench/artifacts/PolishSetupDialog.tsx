@@ -187,6 +187,13 @@ export function PolishSetupDialog({
 
     setStarting(true)
     try {
+      // Save the selected snapshot before the backend loads its recipes.
+      await Promise.all(recipes.filter((recipe) => runnable.includes(recipe.slotId)).map((recipe) => savePolishRecipe({
+        slotId: recipe.slotId,
+        prompt: recipe.prompt,
+        modelKey: recipe.modelKey,
+        thinking: recipe.thinking,
+      })))
       await start({ projectPath, chapter, slotIds: runnable, baselineText: originalText })
       onStarted(runnable)
       onOpenChange(false)
@@ -210,7 +217,7 @@ export function PolishSetupDialog({
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5">
           <p className="shrink-0 text-xs leading-5 text-muted-foreground">
-            用你自己的要求改这一章的文字。改成什么样由你的要求决定；我只负责盯住人名、数字这些已经定下的事实。
+            用你自己的要求改这一章的文字。改成什么样由你的要求决定；人名、数字和段落会自动核对，采用时会另调模型核对情节。请对照原稿确认。
             选中的方案会各出一版，跑完在正文页横向对比。
           </p>
 
@@ -231,6 +238,7 @@ export function PolishSetupDialog({
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={starting}
                       onChange={() => toggleSelected(slotId)}
                       aria-label={`本轮跑${POLISH_SLOT_LABELS[slotId]}`}
                     />
@@ -241,12 +249,14 @@ export function PolishSetupDialog({
                   <Textarea
                     className="mt-2 min-h-40 flex-1 resize-none bg-workspace text-sm"
                     value={recipe?.prompt ?? ''}
+                    disabled={starting}
                     placeholder={PROMPT_PLACEHOLDER}
                     onChange={(event) => updateRecipe(slotId, { prompt: event.target.value })}
                     onBlur={() => persist(slotId, {})}
                   />
 
                   <Select
+                    disabled={starting}
                     value={recipe?.modelKey ?? 'primary'}
                     onValueChange={(value) => {
                       const modelKey = value === 'primary' ? null : value
@@ -275,6 +285,7 @@ export function PolishSetupDialog({
                     <input
                       type="checkbox"
                       checked={recipe?.thinking ?? false}
+                      disabled={starting}
                       onChange={(event) => {
                         updateRecipe(slotId, { thinking: event.target.checked })
                         persist(slotId, { thinking: event.target.checked })
@@ -291,7 +302,7 @@ export function PolishSetupDialog({
         <DialogFooter className="shrink-0 items-center justify-between border-t border-border bg-active/40 px-6 py-4 sm:justify-between">
           <div className="flex items-center gap-2">
             <span className={METADATA_TEXT_CLASS}>写完新章自动润色</span>
-            <Select value={standingSlotId ?? 'off'} onValueChange={handleStandingChange}>
+            <Select value={standingSlotId ?? 'off'} onValueChange={handleStandingChange} disabled={starting}>
               <SelectTrigger className="h-8 w-32 text-xs">
                 <SelectValue />
               </SelectTrigger>

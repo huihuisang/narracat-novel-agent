@@ -1,5 +1,7 @@
 // electron/main/novel/chapter-outline-edit.ts
-import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { access, readdir, readFile, rm } from 'node:fs/promises'
+import { constants } from 'node:fs'
+import { atomicWriteFile } from '../atomic-write.ts'
 import { join } from 'node:path'
 import { OUTLINE_DIR, chapterBaseName, legacyChapterBaseName } from './novel-layout.ts'
 import { isFirstTierChapterArrayField, isFirstTierChapterField } from '@shared/lib/chapter-outline-field-tier'
@@ -140,6 +142,7 @@ export async function locateChapterOutlineFiles(
 /** glob 定位 → 读盘最新 → 守边界应用编辑 → 写 json + 写渲染器供稿的 md（两文件更新）。 */
 export async function submitChapterOutlineFieldEdit(
   input: ChapterOutlineEditRequest,
+  writeAtomic = atomicWriteFile,
 ): Promise<ChapterOutlineEditResult> {
   const located = await locateChapterOutlineFiles(input.projectPath, input.chapter)
   if (!located) return { ok: false, message: '未找到该章的章纲数据文件。' }
@@ -155,8 +158,6 @@ export async function submitChapterOutlineFieldEdit(
   if (!outcome.ok) return outcome
 
   try {
-    // 真相源 json：2 空格缩进 + 末尾换行；key 原序保留（spread 只改目标字段）。
-    await writeFile(located.jsonPath, `${JSON.stringify(outcome.payload, null, 2)}\n`, 'utf-8')
     // 只读孪生 md：主进程按「读盘最新 json + 本次编辑」重渲（P1-3——渲染端旧快照不再进写路径）。
     // 派生展示字段只进渲染入参，不落 json。
     const enriched: ChapterOutlineData = { ...(outcome.payload as ChapterOutlineData) }
@@ -166,7 +167,31 @@ export async function submitChapterOutlineFieldEdit(
     if (Object.keys(foreshadowingDescriptions).length > 0) enriched.foreshadowingDescriptions = foreshadowingDescriptions
     const stateDimensionNames = await readStateDimensionDisplayNames(input.projectPath)
     if (Object.keys(stateDimensionNames).length > 0) enriched.stateDimensionNames = stateDimensionNames
-    await writeFile(located.mdPath, `${renderChapterOutlineMarkdown(enriched).trimEnd()}\n`, 'utf-8')
+    const nextJson = `${JSON.stringify(outcome.payload, null, 2)}\n`
+    const nextMarkdown = `${renderChapterOutlineMarkdown(enriched).trimEnd()}\n`
+    await access(located.jsonPath, constants.W_OK)
+    let previousMarkdown: string | undefined
+    try {
+      previousMarkdown = await readFile(located.mdPath, 'utf8')
+      await access(located.mdPath, constants.W_OK)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    // Render first. Commit the derived file before replacing the authoritative JSON.
+    try {
+      await writeAtomic(located.mdPath, nextMarkdown)
+      await writeAtomic(located.jsonPath, nextJson)
+    } catch (error) {
+      // A directory sync can fail after rename; both files are then already committed.
+      if (await readFile(located.jsonPath, 'utf8') === nextJson) return { ok: true }
+      try {
+        if (previousMarkdown === undefined) await rm(located.mdPath, { force: true })
+        else await writeAtomic(located.mdPath, previousMarkdown)
+      } catch {
+        return { ok: false, message: '章纲数据未保存，展示文件恢复失败，请刷新并重新生成章纲展示。' }
+      }
+      throw error
+    }
   } catch {
     return { ok: false, message: '写入章纲文件失败。' }
   }

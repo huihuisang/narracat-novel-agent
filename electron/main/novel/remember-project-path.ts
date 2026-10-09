@@ -26,6 +26,7 @@ export async function rememberNovelProjectPath(
     loadProjectSummary: (projectPath: string) => Promise<NovelProjectSummary>
     readConfig: () => Promise<AppConfig>
     writeConfig: (config: AppConfig) => Promise<unknown>
+    mutateConfig?: (mutate: (config: AppConfig) => AppConfig) => Promise<unknown>
   },
 ): Promise<{ updated: boolean }> {
   if (input.previousPath === input.currentPath) return { updated: false }
@@ -35,8 +36,7 @@ export async function rememberNovelProjectPath(
     throw new Error('项目身份与新位置不匹配。')
   }
 
-  const config = await dependencies.readConfig()
-  await dependencies.writeConfig({
+  const mutate = (config: AppConfig): AppConfig => ({
     ...config,
     recentNovelPaths: reconcileRecentNovelPaths(
       config.recentNovelPaths,
@@ -44,5 +44,7 @@ export async function rememberNovelProjectPath(
       input.currentPath,
     ),
   })
+  if (dependencies.mutateConfig) await dependencies.mutateConfig(mutate)
+  else await dependencies.writeConfig(mutate(await dependencies.readConfig()))
   return { updated: true }
 }

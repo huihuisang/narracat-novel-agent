@@ -683,8 +683,24 @@ export async function novelCheckpoint(args, ctx) {
         return singleError("state.yaml", "可读写的合法 YAML", "不可用", loaded.error);
     }
     const { doc, statePath } = loaded;
-    const lastCommand = isPositiveInteger(chapter) ? `${command.trim()} ${chapter}` : command.trim();
+    const syncCommandMatch = /^sync-chapter-memory(?: (\d+))?$/.exec(command.trim());
+    const syncCommand = isPositiveInteger(chapter) && syncCommandMatch !== null &&
+        (syncCommandMatch[1] === undefined || Number(syncCommandMatch[1]) === chapter);
+    const lastCommand = syncCommand ? `sync-chapter-memory ${chapter}` :
+        isPositiveInteger(chapter) ? `${command.trim()} ${chapter}` : command.trim();
     const timestamp = new Date().toISOString();
+    let memorySyncReceipt;
+    if (isPositiveInteger(chapter) && syncCommand &&
+        (String(step) === "1" || String(step) === "3")) {
+        const completed = doc.getIn(["progress", "completed_chapters"]);
+        const chapters = completed?.toJSON?.();
+        const summary = ctx.db.prepare("SELECT 1 FROM chapter_summaries WHERE novel_id = ? AND chapter = ?").get(ctx.novelId, chapter);
+        const manuscript = await findManuscript(ctx.projectRoot, chapter);
+        if (Array.isArray(chapters) && Math.max(...chapters.filter(isPositiveInteger)) === chapter && summary && manuscript) {
+            const content = await readFile(manuscript.path, "utf8");
+            memorySyncReceipt = { chapter, manuscript_sha256: createHash("sha256").update(content, "utf8").digest("hex") };
+        }
+    }
     doc.setIn(["checkpoint", "last_command"], lastCommand);
     doc.setIn(["checkpoint", "last_step"], step);
     doc.setIn(["checkpoint", "timestamp"], timestamp);
@@ -694,6 +710,7 @@ export async function novelCheckpoint(args, ctx) {
         last_command: lastCommand,
         last_step: step,
         timestamp,
+        ...memorySyncReceipt,
     };
 }
 // ============================================================

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { lstat } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { writeAppConfig } from '../config.ts'
+import { dirname, join, resolve } from 'node:path'
+import { mutateAppConfig } from '../config.ts'
 import { currentAgentCorePath } from './app.ts'
 import {
   configPath,
@@ -437,13 +437,13 @@ export function registerNovelIpcHandlers(): void {
         { sourcePath, destinationPath: selectedDestination.filePath },
         { ...projectBackupEnvironment(), existingProjects },
       )
-      await writeAppConfig(configPath(), {
-        ...config,
+      await mutateAppConfig(configPath(), async (current) => ({
+        ...current,
         recentNovelPaths: await pruneMissingRecentNovelPaths([
           restored.project.path,
-          ...config.recentNovelPaths.filter((path) => path !== restored.project.path),
+          ...current.recentNovelPaths.filter((path) => path !== restored.project.path),
         ]),
-      })
+      }))
       return restored
     },
   )
@@ -452,7 +452,8 @@ export function registerNovelIpcHandlers(): void {
     return rememberNovelProjectPath(parseRememberNovelProjectPathInput(input), {
       loadProjectSummary: loadNovelProjectSummary,
       readConfig: readCurrentConfig,
-      writeConfig: (config) => writeAppConfig(configPath(), config),
+      writeConfig: (config) => mutateAppConfig(configPath(), (current) => ({ ...current, recentNovelPaths: config.recentNovelPaths })),
+      mutateConfig: (mutate) => mutateAppConfig(configPath(), mutate),
     })
   })
 
@@ -465,13 +466,13 @@ export function registerNovelIpcHandlers(): void {
       input: createInput,
     })
 
-    await writeAppConfig(configPath(), {
-      ...config,
+    await mutateAppConfig(configPath(), (current) => ({
+      ...current,
       recentNovelPaths: [
         created.projectPath,
-        ...config.recentNovelPaths.filter((path) => path !== created.projectPath),
+        ...current.recentNovelPaths.filter((path) => path !== created.projectPath),
       ],
-    })
+    }))
 
     return created
   })
@@ -500,10 +501,10 @@ export function registerNovelIpcHandlers(): void {
         mode: deleteInput.mode,
       })
 
-      await writeAppConfig(configPath(), {
-        ...config,
-        recentNovelPaths: result.recentNovelPaths,
-      })
+      await mutateAppConfig(configPath(), (current) => ({
+        ...current,
+        recentNovelPaths: current.recentNovelPaths.filter((path) => resolve(path) !== resolve(result.projectPath)),
+      }))
 
       return {
         projectPath: result.projectPath,

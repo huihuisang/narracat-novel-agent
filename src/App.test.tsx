@@ -13,7 +13,7 @@ describe('App shell', () => {
   test('lazy-loads route bodies while keeping app-level providers eager', () => {
     const source = readFileSync(new URL('./App.tsx', import.meta.url), 'utf8')
 
-    expect(source).toContain("import { lazy, Suspense } from 'react'")
+    expect(source).toContain("import { lazy, Suspense, useEffect } from 'react'")
     expect(source).toContain("lazy(() => import('./routes/library.tsx')")
     expect(source).toContain("lazy(() => import('./routes/workbench.tsx')")
     expect(source).toContain("lazy(() => import('./routes/settings.tsx')")

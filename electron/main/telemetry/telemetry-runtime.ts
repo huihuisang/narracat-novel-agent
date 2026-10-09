@@ -21,7 +21,7 @@ import {
   type TelemetryState,
 } from '@shared/types/telemetry'
 import { resolvePrimaryModel } from '@shared/lib/model-slots'
-import { getConfigPath, readAppConfig, writeAppConfig, type AppConfig } from '../config.ts'
+import { getConfigPath, readAppConfig, mutateAppConfig, type AppConfig } from '../config.ts'
 import type { RunTelemetryEvent } from '../agent/events/agent-main-side-effects.ts'
 import { planRunTelemetry, UNKNOWN_MODEL } from './run-telemetry-plan.ts'
 import {
@@ -118,8 +118,7 @@ async function loadState(): Promise<TelemetryState> {
 
 async function mutateConfig(mutate: (config: AppConfig) => AppConfig): Promise<TelemetryState> {
   const path = getConfigPath(app.getPath('userData'))
-  const current = await readAppConfig(path)
-  const next = await writeAppConfig(path, mutate(current))
+  const next = await mutateAppConfig(path, mutate)
   cachedState = stateFromConfig(next)
   return cachedState
 }
