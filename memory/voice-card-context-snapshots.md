@@ -51,3 +51,10 @@ Agents profiles page, with delivery still disabled. The snapshot was restored;
 all 167 protected novel and settings files matched their pre-install contents.
 The replaced App was deleted after verification. No model writing request,
 notarization, or release publication was performed.
+
+The initial quit check used an unsupported non-capturing group in `pgrep` and
+mistook exit code 2 for an absent process. The old process was then stopped,
+and the App was launched again. A new PID and start time confirmed the restart;
+the old-snapshot UI probe and file checks were repeated successfully. Use POSIX
+extended regex syntax for `pgrep`, accept only exit code 1 as no match, and
+verify the process identity after every installation.
