@@ -82,6 +82,30 @@ pre-existing documentation issues in ADR-0036, ADR-0037, and historical progress
 The installed App has not been replaced. No live-provider writing evaluation,
 release package, or deployment is part of this repair.
 
+## Local installation (2026-10-09)
+
+After the user requested installation and deletion of the old App, the signed
+macOS arm64 package was rebuilt from `b7a8fc4ee9e9c8e463d664c9c825b18a517ad4e2`
+and installed at `/Applications/NarraCat.app` (0.4.3). The earlier source-only
+boundary above describes the repair phase, not this subsequent installation.
+
+- Package boundary audit, Developer ID signature, Hardened Runtime, and
+  packaged memory/embedding smoke passed. This was a local signed build,
+  without notarization or publication.
+- All 3,212 installed files and symlink targets match the built bundle.
+- Installed Electron smoke with a temporary profile confirms concurrent-save
+  protection, old-chapter divergence, and the polish dialog; no renderer errors.
+- The normal App was reopened with the author's profile and visibly restored
+  the saved workbench. Novel-file hashes remain unchanged and config values match
+  the pre-install snapshot. A verified copy of 165 novel/settings files is kept
+  in `~/Library/Application Support/NarraCat-install-backups/20261009-130854-runtime-fixes/`.
+- The replaced App and one stale hidden installation copy were deleted after
+  validation. Existing historical data backups were not removed.
+
+Evidence: `/tmp/narracat-install-latest-package.log`,
+`/tmp/narracat-runtime-installed-gui.log`, and
+`/tmp/narracat-runtime-fixes-install.json`.
+
 ## Findings
 
 ### F1 — P1: concurrent manuscript saves can lose an edit
