@@ -32,7 +32,7 @@ export interface WriterPromptPreview {
   authorRequests: { id: string; text: string; enabled: boolean }[]
   systemPrompt: string
   craftLibrary: string
-  bookContext: { chapter: number; persona: string; styleDirective: string; craftReferences: string[] } | null
+  bookContext: { chapter: number; persona: string; personaError?: string; styleDirective: string; craftReferences: string[] } | null
 }
 
 export function defaultWriterPromptSettings(): WriterPromptSettings {

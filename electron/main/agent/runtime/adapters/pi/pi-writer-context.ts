@@ -4,6 +4,7 @@ import { createReadToolDefinition } from '@mariozechner/pi-coding-agent'
 import type { ToolDefinition } from '@mariozechner/pi-coding-agent'
 import type { WriterPromptSettings } from '@shared/types/writer-prompts'
 import { expandLikePi } from './pi-tool-guard'
+import { readBookPersona } from '../../../../engine/book-persona'
 
 async function selectedReferencePaths(cwd: string): Promise<Set<string>> {
   const directory = join(cwd, '.narracat/context-packs')
@@ -28,7 +29,7 @@ async function selectedReferencePaths(cwd: string): Promise<Set<string>> {
   return paths
 }
 
-export function createWriterContextReadTool(cwd: string, settings: WriterPromptSettings, agentCorePath?: string): ToolDefinition {
+export function createWriterContextReadTool(cwd: string, settings: WriterPromptSettings, agentCorePath?: string, userDataPath?: string): ToolDefinition {
   const normal = createReadToolDefinition(cwd)
   let references: Promise<Set<string>> | undefined
   const filtered = (text: string) => createReadToolDefinition(cwd, {
@@ -50,9 +51,24 @@ export function createWriterContextReadTool(cwd: string, settings: WriterPromptS
         settings.bookStyleChangedAt ? Date.parse(settings.bookStyleChangedAt) : 0,
         settings.craftSourcesChangedAt ? Date.parse(settings.craftSourcesChangedAt) : 0,
       )
-      if (/^\.narracat\/staging\/ch-\d+\.brief\.md$/.test(local) && contextChangedAt > 0) {
-        if ((await stat(file)).mtimeMs < contextChangedAt) {
+      const briefChapter = local.match(/^\.narracat\/staging\/ch-(\d+)\.brief\.md$/)?.[1]
+      if (briefChapter) {
+        const modifiedAt = (await stat(file)).mtimeMs
+        if (contextChangedAt > 0 && modifiedAt < contextChangedAt) {
           throw new Error('本书写法来源选项已更改，请重新读取当前上下文包并重新生成本章任务书，再派发写手。')
+        }
+        if (agentCorePath && settings.bookPersonaEnabled) {
+          const packPath = join(root, '.narracat/context-packs', `ch-${briefChapter}.json`)
+          const pack = await readFile(packPath, 'utf8').catch((error: NodeJS.ErrnoException) => {
+            if (error.code === 'ENOENT') return null
+            throw error
+          })
+          if (pack) {
+            const persona = await readBookPersona({ projectPath: root, agentCorePath, userDataPath, chapter: Number(briefChapter), pack: JSON.parse(pack) })
+            if (persona.changed || (persona.sourceModifiedAt !== undefined && modifiedAt < persona.sourceModifiedAt)) {
+              throw new Error('本书声音卡已更新，请重新生成本章上下文和任务书，再派发写手。')
+            }
+          }
         }
       }
       if (agentCorePath && !settings.craftLibraryEnabled) {
@@ -62,17 +78,26 @@ export function createWriterContextReadTool(cwd: string, settings: WriterPromptS
       if (!settings.craftReferencesEnabled && !isContextPack && (await (references ??= selectedReferencePaths(root))).has(file)) {
         return filtered('本书已关闭选中的写法参考，跳过此来源，不向章节任务书添加其写法要求。').execute(id, { ...params, path: file }, signal, onUpdate, context)
       }
-      if ((!settings.bookPersonaEnabled || !settings.bookStyleEnabled || !settings.craftReferencesEnabled) && isContextPack) {
+      if (isContextPack) {
         // A rebuilt pack can select new files during this run.
         references = undefined
         const pack = JSON.parse(await readFile(file, 'utf8')) as Record<string, unknown>
         const delivered = { ...pack }
-        if (!settings.bookPersonaEnabled) delete delivered.persona
+        if (!settings.bookPersonaEnabled) {
+          delete delivered.persona
+          delete delivered.persona_source
+        } else if (agentCorePath) {
+          const persona = await readBookPersona({ projectPath: root, agentCorePath, userDataPath, chapter: Number(local.match(/ch-(\d+)/)?.[1]), pack })
+          if (typeof pack.persona === 'string') delivered.persona = persona.body
+        }
+        delete delivered.persona_source
         if (!settings.bookStyleEnabled) {
           delete delivered.style_directive
           delete delivered.style_examples
         }
         if (!settings.craftReferencesEnabled) delete delivered.craft_pack_hints
+        const unchanged = JSON.stringify(delivered) === JSON.stringify(pack)
+        if (unchanged) return normal.execute(id, params, signal, onUpdate, context)
         return filtered(JSON.stringify(delivered, null, 2)).execute(id, { ...params, path: file }, signal, onUpdate, context)
       }
       return normal.execute(id, params, signal, onUpdate, context)

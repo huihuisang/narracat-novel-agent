@@ -19,6 +19,7 @@ import { selectStyleExamples, detectChapterEmotions } from "../corpus-loader.js"
 import { listStyleAnchorRows } from "./style-anchor.js";
 import { selectCraftPacks } from "../craft-pack-loader.js";
 import { selectPersona } from "../persona-loader.js";
+import { createPersonaSource } from "../context-persona.js";
 import { resolvePackPools } from "../packs/pack-resolver.js";
 import { STRUCTURE_STAGES } from "../packs/pack-manifest.js";
 import { buildReceiptEntries, writeCapabilityReceipt, writePlanningCapabilityReceipt } from "../packs/capability-receipt.js";
@@ -2139,7 +2140,7 @@ export async function novelBuildWritingContextPack(args, ctx) {
         chapter_outline: chapterOutline,
         world_rules: worldRules,
         style_directive: styleDirective,
-        ...(personaCard ? { persona: personaCard.body } : {}),
+        ...(personaCard ? { persona: personaCard.body, persona_source: createPersonaSource(personaCard, packPools.personas) } : {}),
         style_examples: styleExamples,
         ...(craftPackHints.length > 0 ? { craft_pack_hints: craftPackHints } : {}),
         previous_chapter_briefs: briefs,

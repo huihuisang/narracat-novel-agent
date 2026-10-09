@@ -64,7 +64,20 @@
     "persona": {
       "type": "string",
       "minLength": 1,
-      "description": "说书人 persona 卡正文（能力层数据的机械选卡结果：按叙述声音关键词匹配官方卡库）。写手住进这个身份写作，style_directive 作为该身份在本书的腔调基因。可选字段：叙述声音缺失或无卡命中时省略，写手回退 style_directive，行为不变"
+      "description": "书级声音卡正文。生成上下文时保存快照，App 投递时按来源读取当前正文；卡片缺失或章级选卡未命中时省略"
+    },
+    "persona_source": {
+      "type": "object",
+      "description": "声音卡来源，用于读取当前正文；不存储绝对路径。直接修改快照正文后保留该修改，不再按此来源替换",
+      "required": ["card_id", "pack_id", "pack_version", "origin", "body_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "card_id": { "type": "string", "minLength": 1 },
+        "pack_id": { "type": "string", "minLength": 1 },
+        "pack_version": { "type": "string", "minLength": 1 },
+        "origin": { "enum": ["official", "user", "community"] },
+        "body_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
     },
     "style_examples": {
       "type": "array",

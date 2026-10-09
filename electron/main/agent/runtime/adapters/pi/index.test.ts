@@ -35,6 +35,35 @@ mock.module('./pi-session.ts', () => ({
 
 const { computeBaselineAllowedRoots, createPiAdapter } = await import('./index.ts')
 
+test('default source choices load current user card text in main and child sessions', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'live-voice-dispatch-'))
+  const projectPath = join(root, 'novel')
+  const userDataPath = join(root, 'profile')
+  const packDir = join(userDataPath, 'packs/my-voice@1.0.0')
+  try {
+    for (const dir of [join(projectPath, '.narracat/context-packs'), join(projectPath, '.narracat/capability-receipts'), join(packDir, 'cards')]) await mkdir(dir, { recursive: true })
+    const source = join(packDir, 'cards/voice.md')
+    const pack = join(projectPath, '.narracat/context-packs/ch-001.json')
+    await writeFile(source, 'CURRENT-USER-VOICE')
+    await writeFile(join(packDir, 'pack.json'), JSON.stringify({ pack_format_version: 1, id: 'my-voice', name: 'Voice', author: 'Tester', version: '1.0.0', cards: [{ type: 'persona', id: 'mine', name: 'Voice', path: 'cards/voice.md', keywords: ['voice'] }] }))
+    await writeFile(join(projectPath, '.narracat/packs.json'), JSON.stringify({ enabled: [{ id: 'my-voice', version: '1.0.0' }] }))
+    await writeFile(pack, JSON.stringify({ persona: 'OLD-USER-VOICE', chapter_outline: 'Plot facts' }))
+    await writeFile(join(projectPath, '.narracat/capability-receipts/ch-001.json'), JSON.stringify({ chapter: 1, entries: [{ type: 'persona', card_id: 'mine', pack_id: 'my-voice', pack_version: '1.0.0', origin: 'user' }] }))
+    const options = await createPiAdapter().createRunOptions(makeRunConfig({ appRoot: process.cwd(), userDataPath, projectPath, loadNarraCatRuntime: true, allowedTools: ['Read', 'Agent'] })) as PiRunOptions
+    capturedChildSessionCalls = []
+    await options.customTools.find((tool) => tool.name === 'Task')!.execute('voice-tc', { subagent_type: 'chapter-writer', prompt: 'Write the chapter.' }, undefined, undefined, {} as never)
+    for (const session of [options, capturedChildSessionCalls[0].options]) {
+      const reader = session.customTools.find((tool) => tool.name === 'read')!
+      const read = async () => (await reader.execute('voice-read', { path: pack }, undefined, undefined, {} as never)).content.map((part) => part.type === 'text' ? part.text : '').join('')
+      expect(await read()).toContain('CURRENT-USER-VOICE')
+      await writeFile(source, 'EDITED-USER-VOICE')
+      expect(await read()).toContain('EDITED-USER-VOICE')
+      await writeFile(source, 'CURRENT-USER-VOICE')
+      expect(await readFile(pack, 'utf8')).toContain('OLD-USER-VOICE')
+    }
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
 test('each profile applies its per-book persona and requirement switches to dispatched sessions', async () => {
   const projectPath = await mkdtemp(join(tmpdir(), 'agent-prompts-dispatch-'))
   const userDataPath = await mkdtemp(join(tmpdir(), 'agent-prompts-user-'))
@@ -114,7 +143,7 @@ test('each craft source combination reaches the main agent and dispatched writer
       await options.customTools.find((tool) => tool.name === 'Task')!.execute('craft-tc', { subagent_type: 'narracat:chapter-writer', prompt: 'Write the chapter.' }, undefined, undefined, {} as never)
       for (const session of [options, capturedChildSessionCalls[0].options]) {
         const reader = session.customTools.find((tool) => tool.name === 'read')
-        if (craftLibraryEnabled && craftReferencesEnabled) { expect(reader).toBeUndefined(); continue }
+        expect(reader).toBeDefined()
         const text = async (path: string) => {
           const result = await reader!.execute('craft-read', { path }, undefined, undefined, {} as never)
           return result.content.map((part) => part.type === 'text' ? part.text : '').join('')
@@ -587,7 +616,7 @@ describe('切片⑤ 子 agent 派发与任务卡接线', () => {
 
   test('命令路径：customTools 含 Task/TaskCreate/TaskUpdate，且三者同步进 tools 白名单（pi isAllowedTool 会过滤）', async () => {
     const options = (await createPiAdapter().createRunOptions(makeRunConfig(commandRunConfig))) as PiRunOptions
-    expect(options.customTools.map((tool) => tool.name)).toEqual(['Task', 'TaskCreate', 'TaskUpdate'])
+    expect(options.customTools.map((tool) => tool.name)).toEqual(['read', 'Task', 'TaskCreate', 'TaskUpdate'])
     expect(options.tools).toEqual(['read', 'write', 'Task', 'TaskCreate', 'TaskUpdate'])
     expect(options.subagentChannel).toBeDefined()
   })
@@ -716,7 +745,7 @@ describe('切片⑥ NovelMemory 工具接线', () => {
 
     expect(capturedChildSessionCalls).toHaveLength(1)
     const childOptions = capturedChildSessionCalls[0]!.options as PiRunOptions
-    expect(childOptions.customTools.map((tool) => tool.name)).toEqual([`${MEMORY_TOOL_PREFIX}novel_query`])
+    expect(childOptions.customTools.map((tool) => tool.name)).toEqual([`${MEMORY_TOOL_PREFIX}novel_query`, 'read'])
     expect(childOptions.tools).toContain(`${MEMORY_TOOL_PREFIX}novel_query`)
     expect(childOptions.tools).not.toContain(`${MEMORY_TOOL_PREFIX}novel_commit_chapter`)
     // 子会话不带 sessionStore（切片⑦）：一次性派发无 resume 消费者，保持 in-memory

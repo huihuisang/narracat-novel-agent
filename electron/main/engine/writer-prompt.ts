@@ -9,6 +9,7 @@ import { authorRequestStorePath, listAuthorRequests } from './author-request-sto
 import { proseOverrideStorePath, readProseOverrides } from './prose-override-store'
 import { NARRACAT_ENGINE_AGENT_IDS } from './agent-core-contract'
 import { readOfficialSkillBody } from './official-skill-body'
+import { readBookPersona } from './book-persona'
 
 export interface WriterPromptInput {
   projectPath: string
@@ -61,7 +62,8 @@ export async function resolveBookAgentOverrides(input: WriterPromptInput): Promi
   return Object.fromEntries(resolved.map((item) => [item.agentId, item.definition]))
 }
 
-async function readLatestBookContext(projectPath: string): Promise<WriterPromptPreview['bookContext']> {
+async function readLatestBookContext(input: WriterPromptInput): Promise<WriterPromptPreview['bookContext']> {
+  const { projectPath } = input
   const directory = join(projectPath, '.narracat/context-packs')
   let files: string[]
   try {
@@ -74,9 +76,18 @@ async function readLatestBookContext(projectPath: string): Promise<WriterPromptP
   const latest = candidates.sort((a, b) => b.modifiedAt - a.modifiedAt)[0]
   if (!latest) return null
   const pack = JSON.parse(await readFile(join(directory, latest.file), 'utf8')) as Record<string, unknown>
+  const chapter = Number(latest.file.match(/\d+/)?.[0])
+  let persona = ''
+  let personaError: string | undefined
+  try {
+    persona = (await readBookPersona({ ...input, chapter, pack })).body
+  } catch (error) {
+    personaError = error instanceof Error ? error.message : '声音卡无法读取，请检查来源。'
+  }
   return {
-    chapter: Number(latest.file.match(/\d+/)?.[0]),
-    persona: typeof pack.persona === 'string' ? pack.persona : '',
+    chapter,
+    persona,
+    ...(personaError ? { personaError } : {}),
     styleDirective: typeof pack.style_directive === 'string' ? pack.style_directive : '',
     craftReferences: Array.isArray(pack.craft_pack_hints) ? pack.craft_pack_hints.flatMap((hint: unknown) => {
       if (!hint || typeof hint !== 'object') return []
@@ -88,7 +99,7 @@ async function readLatestBookContext(projectPath: string): Promise<WriterPromptP
 
 export async function getWriterPromptPreview(input: WriterPromptInput): Promise<WriterPromptPreview> {
   const isWriter = (input.agentId ?? 'chapter-writer') === 'chapter-writer'
-  const [resolved, bookContext, craftLibrary] = await Promise.all([resolveAgentPrompt(input), isWriter ? readLatestBookContext(input.projectPath) : Promise.resolve(null), isWriter ? readOfficialSkillBody({ agentCorePath: input.agentCorePath, skillId: 'novel-web-craft' }) : Promise.resolve('')])
+  const [resolved, bookContext, craftLibrary] = await Promise.all([resolveAgentPrompt(input), isWriter ? readLatestBookContext(input) : Promise.resolve(null), isWriter ? readOfficialSkillBody({ agentCorePath: input.agentCorePath, skillId: 'novel-web-craft' }) : Promise.resolve('')])
   const { definition, ...sources } = resolved
   return { ...sources, systemPrompt: definition.prompt, bookContext, craftLibrary }
 }

@@ -1427,7 +1427,7 @@ describe("novel_build_writing_context_pack", () => {
     expect(pack.current_antagonist_agent).toBe("药圃管事");
     // fixture 叙述声音（猛文热血/干净利落）命中「少年·滚烫」→ 卡正文进包，作为讲法范本供写手参考
     // （不命中即省略字段的回退路径由 persona-loader.test.ts 专项覆盖）
-    expect(pack.persona).toContain("你讲故事的时候，血是热的。");
+    expect(pack.persona).toContain("你愿意把人物想争取的东西写得鲜明");
     expect(pack.word_count_range).toEqual([2400, 3600]);
     expect(pack.chapter_outline).toContain("# 第2章");
     // payoff_beat 透传：fixture 第2章标了 reveal，章纲 md 经包带到写手手里
@@ -1923,7 +1923,9 @@ describe("novel_build_writing_context_pack", () => {
       unknown
     >;
     expect(typeof personaPack.persona).toBe("string");
-    expect(personaPack.persona as string).toContain("茶馆");
+    expect(personaPack.persona as string).toContain("你讲故事时愿意带一点笑意");
+    expect(personaPack.persona_source).toMatchObject({ card_id: "storyteller-witty", pack_id: "official-base", origin: "official" });
+    expect((personaPack.persona_source as Record<string, unknown>).body_sha256).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it("诙谐书遇悲怆主导章：persona 调制生效，字段省略且回主会话可解释说明", async () => {
@@ -1961,6 +1963,7 @@ describe("novel_build_writing_context_pack", () => {
     const pack = JSON.parse(readFileSync(result.pack_path, "utf-8")) as Record<string, unknown>;
     // 被调制掉：包内不带 persona 字段，写手回退 style_directive
     expect(pack.persona).toBeUndefined();
+    expect(pack.persona_source).toBeUndefined();
     // 可解释：回主会话的系统诊断里能看到调制原因（不进包、不刷写手注意力）
     expect(
       result.warnings.some((w) => w.includes("persona 调制") && w.includes("悲伤")),
@@ -2003,7 +2006,7 @@ describe("novel_build_writing_context_pack", () => {
     expect(result.ok).toBe(true);
     const pack = JSON.parse(readFileSync(result.pack_path, "utf-8")) as Record<string, unknown>;
     expect(typeof pack.persona).toBe("string");
-    expect(pack.persona as string).toContain("刀尖");
+    expect(pack.persona as string).toContain("你的叙述直接，重视行动的后果");
     expect(result.warnings.some((w) => w.includes("persona 调制"))).toBe(false);
   });
 

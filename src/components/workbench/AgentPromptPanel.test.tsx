@@ -17,6 +17,13 @@ const preview: WriterPromptPreview = {
 }
 
 describe('AgentPromptPanel', () => {
+  test('a missing voice source leaves the switch available and shows its error', () => {
+    const html = renderToStaticMarkup(<TooltipProvider><AgentPromptPanelView preview={{ ...preview, bookContext: { ...preview.bookContext!, persona: '', personaError: '声音卡源文件无法读取' } }} /></TooltipProvider>)
+    expect(html).toContain('声音卡源文件无法读取')
+    expect(html).toContain('aria-label="启用书级声音卡"')
+    expect(html).not.toContain('disabled=""')
+  })
+
   test('shows each source with an accessible independent switch', () => {
     const html = renderToStaticMarkup(<TooltipProvider><AgentPromptPanelView preview={preview} /></TooltipProvider>)
     expect(html).toContain('Agents 档案')

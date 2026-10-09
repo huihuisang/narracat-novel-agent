@@ -96,10 +96,11 @@ async function buildPiRunOptions(
 
   const agentCorePath = resolveNarraCatEngine({ appRoot: args.appRoot, resourcesPath: args.resourcesPath }).agentCorePath
   const writerSettings = await readWriterPromptSettings(args.loadNarraCatRuntime && face.includeTaskDispatch ? args.projectPath : undefined)
-  const filterWriterContext = !writerSettings.bookPersonaEnabled || !writerSettings.bookStyleEnabled
+  const filterWriterContext = Boolean(args.loadNarraCatRuntime && face.includeTaskDispatch && args.projectPath) || !writerSettings.bookPersonaEnabled || !writerSettings.bookStyleEnabled
     || writerSettings.bookPersonaChangedAt !== null || writerSettings.bookStyleChangedAt !== null
     || !writerSettings.craftLibraryEnabled || !writerSettings.craftReferencesEnabled || writerSettings.craftSourcesChangedAt !== null
   const contextPolicy = [
+    writerSettings.bookPersonaEnabled && args.loadNarraCatRuntime ? '书级声音卡在读取上下文时从当前源文件装载。写作前重新读取本章上下文；声音卡更新后，先重建上下文与任务书，不沿用历史写法。' : null,
     !writerSettings.bookPersonaEnabled ? '本书已关闭书级声音卡。上下文包的声音卡已在读取时移除，不得从历史任务书或会话恢复该声音卡。' : null,
     !writerSettings.bookStyleEnabled ? '本书已关闭书级文风。上下文包的文风指令与样章示例已在读取时移除，不得从历史任务书或会话恢复这些写法要求。' : null,
     !writerSettings.craftLibraryEnabled ? '本书已关闭网文写作手艺。跳过 novel-web-craft/SKILL.md，不读取、不提炼其原则到任务书，不从历史任务书或会话恢复；其余来源按各自开关处理。' : null,
@@ -126,7 +127,7 @@ async function buildPiRunOptions(
   // customTool 覆盖内置那个。只在工具面本来就有它时注入——不给没这个面的会话凭空多一个工具。
   if (face.tools.includes('find')) customTools.push(createPortableFindTool(cwd))
   if (face.tools.includes('grep')) customTools.push(createPortableGrepTool(cwd))
-  if (filterWriterContext && face.tools.includes('read')) customTools.push(createWriterContextReadTool(cwd, writerSettings, agentCorePath))
+  if (filterWriterContext && face.tools.includes('read')) customTools.push(createWriterContextReadTool(cwd, writerSettings, agentCorePath, args.userDataPath))
   // 引擎钩子（字数提示/任务书系统词硬门）只在 loadNarraCatRuntime 时挂：学习/向导等沙盒会话
   // 本就不跑引擎契约，与 SDK 侧同条件不装载 plugin 对齐（brief 见 Task 5 任务书）。
   const agentDir = join(args.userDataPath ?? args.appRoot, 'pi-agent')
@@ -192,7 +193,7 @@ async function buildPiRunOptions(
     // 与父会话同一条纪律：写手/审校都跑在子会话里，漏了这条它们的 find/grep 照样是坏的。
     const childCustomTools = [
       ...childMemoryTools,
-      ...(filterWriterContext && childFace.tools.includes('read') ? [createWriterContextReadTool(cwd, writerSettings, agentCorePath)] : []),
+      ...(filterWriterContext && childFace.tools.includes('read') ? [createWriterContextReadTool(cwd, writerSettings, agentCorePath, args.userDataPath)] : []),
       ...(childFace.tools.includes('find') ? [createPortableFindTool(cwd)] : []),
       ...(childFace.tools.includes('grep') ? [createPortableGrepTool(cwd)] : []),
     ]

@@ -77,7 +77,7 @@ function AgentPromptSources({ preview, busy, onChange, onOpen }: {
             <h3 className="text-sm font-semibold text-foreground">本书声音</h3>
             <span className="text-xs text-muted-foreground">{bookContext ? `最近上下文 · 第 ${bookContext.chapter} 章` : '首次生成上下文后可查看内容'}</span>
           </div>
-          <PromptSourceRow title="书级声音卡" text={bookContext?.persona ?? ''} enabled={preview.settings.bookPersonaEnabled} disabled={busy} onOpen={() => onOpen('book-persona')} onToggle={(enabled) => onChange?.({ kind: 'book-persona', enabled })} />
+          <PromptSourceRow title="书级声音卡" text={bookContext?.personaError ?? bookContext?.persona ?? ''} enabled={preview.settings.bookPersonaEnabled} disabled={busy} onOpen={() => onOpen('book-persona')} onToggle={(enabled) => onChange?.({ kind: 'book-persona', enabled })} />
           <PromptSourceRow title="书级文风" text={bookContext?.styleDirective ?? ''} enabled={preview.settings.bookStyleEnabled} disabled={busy} onOpen={() => onOpen('book-style')} onToggle={(enabled) => onChange?.({ kind: 'book-style', enabled })} />
         </section>
       ) : null}
@@ -103,7 +103,7 @@ export function AgentPromptPanelView({ preview, agentId = preview?.agentId ?? 'c
   const title = target === 'system' ? `${agent?.name ?? 'Agent'}当前提示词`
     : target === 'book-persona' ? '书级声音卡' : target === 'book-style' ? '书级文风' : target === 'craft-library' ? '网文写作手艺' : target === 'craft-references' ? '选中的写法参考' : block?.title ?? '作者要求'
   const text = target === 'system' ? active?.systemPrompt
-    : target === 'book-persona' ? bookContext?.persona : target === 'book-style' ? bookContext?.styleDirective : target === 'craft-library' ? active?.craftLibrary : target === 'craft-references' && active ? craftReferenceText(active) : block?.text ?? request?.text
+    : target === 'book-persona' ? bookContext?.personaError ?? bookContext?.persona : target === 'book-style' ? bookContext?.styleDirective : target === 'craft-library' ? active?.craftLibrary : target === 'craft-references' && active ? craftReferenceText(active) : block?.text ?? request?.text
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-agent-prompt-panel="true">
