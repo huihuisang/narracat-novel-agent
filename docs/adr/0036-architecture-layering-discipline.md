@@ -10,15 +10,15 @@ NarraCat-app（Electron + React）自主进程与渲染进程分工确立后，�
 反映在四个方面：
 
 1. **主进程反向 import 渲染层**：87 个主进程文件直接 import `src/lib` 实现代码，包括
-   状态管理、工具函数、校验逻辑，造成两侧代码牢牢绑定在一起。例如 `DurableEventV1` 
+   状态管理、工具函数、校验逻辑，造成两侧代码牢牢绑定在一起。例如 `DurableEventV1`
    只在 `src/types` 定义一次，主进程却直接 `import` 使用。若需调整渲染层结构或
    导出形式，主进程改动波及面广。
 
-2. **跨进程类型手工双定义**：`AgentRunRequest`、`premise-field-tier`、`chapter-outline-field-tier` 
+2. **跨进程类型手工双定义**：`AgentRunRequest`、`premise-field-tier`、`chapter-outline-field-tier`
    等三组类型分别在 `src/types` 和主进程定义，手工保持同步。任何改动须两处改，易出现漂移；
    无强制手段保证单一真相源。
 
-3. **IPC 路由层充斥业务编排**：`ipc.ts` 2129 行、116 个 handler，不仅做「入参校验 → 
+3. **IPC 路由层充斥业务编排**：`ipc.ts` 2129 行、116 个 handler，不仅做「入参校验 →
    调用域模块 → 返回结果」这类路由职责，还内嵌了涉及多个子域的条件分支、状态管理、
    工具权限等业务逻辑。大幅提高了理解和维护成本。
 
@@ -85,7 +85,7 @@ NarraCat-app（Electron + React）自主进程与渲染进程分工确立后，�
   - 禁止非 `adapters/` 目录 import Agent runtime 包（含 `import type`，不豁免）
   - 测试文件（`*.test.ts(x)`）豁免，允许跨层拿 fixture
 - 脚本经 `bun --no-cache run check:architecture`（`--enforce` 模式，违规即非零退出）
-  手动触发，并作为 `bun run test` 的前置门（见验证命令集）；当前**不是** CI/git hook 自动触发，
+  手动触发，并作为 `bun --no-cache run test` 的前置门（见验证命令集）；当前**不是** CI/git hook 自动触发，
   依赖开发者按验证清单手动跑或被 `test` 脚本捎带触发。
 - **未实现，留作 follow-up**（当前脚本用正则扫字面量 specifier，不做以下几类）：
   1. AST 级解析（正则无法穷尽所有 JS/TS import 语法变体，如条件表达式内嵌 specifier）
@@ -100,9 +100,9 @@ NarraCat-app（Electron + React）自主进程与渲染进程分工确立后，�
 
 - **Phase 0（当前）**：
   - 写好本 ADR 与 runtime 替换决策文档
-  - 实现 `check-architecture.mjs` 脚本并接入 `bun run test` 前置门（本仓 App 层暂无 CI，
+  - 实现 `check-architecture.mjs` 脚本并接入 `bun --no-cache run test` 前置门（本仓 App 层暂无 CI，
     见验证命令集）
-  
+
 - **Phase 1**：
   - 建立 `shared/types/` 和 `shared/lib/` 目录
   - 迁移已有跨进程类型：`AgentRunRequest`、`AgentEvent` 等从 `src/types` 和主进程定义
@@ -115,26 +115,26 @@ NarraCat-app（Electron + React）自主进程与渲染进程分工确立后，�
     `engine/`、`chat/` 等）
 
 - **Phase 2**：
-  - 将现有 SDK 相关代码（`event-mapper.ts`、`sdk-runner.ts`）挪入 
+  - 将现有 SDK 相关代码（`event-mapper.ts`、`sdk-runner.ts`）挪入
     `electron/main/agent/runtime/adapters/claude-sdk/`
   - 明确 `AgentRuntime` 接口契约
   - 为 Pi adapter 预留空间
 
 ### 验证命令集
 
-添加到 `bun run` 验证命令：
+添加到 `bun --no-cache run` 验证命令：
 
 ```bash
-bun run check:architecture    # 架构纪律硬检查
-bun run typecheck              # TypeScript 类型检查
-bun run test                   # 单元测试
+bun --no-cache run check:architecture  # Check architecture boundaries.
+bun --no-cache run typecheck           # Check TypeScript types.
+bun --no-cache run test                # Run unit tests.
 ```
 
 验证通过的标志：
 - `check:architecture` 无违规输出
 - `typecheck` 无错误
 - `test` 全绿
-- 打包测试（`bun run build`）成功
+- 打包测试（`bun --no-cache run build`）成功
 
 ### 设计原理
 
@@ -160,7 +160,7 @@ bun run test                   # 单元测试
 
 本 ADR 的架构纪律在以下条件全部满足时视为成功落地：
 
-1. `scripts/check-architecture.mjs` 脚本编写完毕，接入 `bun run test` 前置门。
+1. `scripts/check-architecture.mjs` 脚本编写完毕，接入 `bun --no-cache run test` 前置门。
 2. `shared/` 层建立，存放初版跨进程契约（AgentRunRequest 等）。
 3. 第一批迁移完成：主进程对 `src/lib` 的依赖逐步转向 `shared/lib`；编译和测试通过；
    `check:architecture` 无违规。

@@ -33,7 +33,7 @@ Zechner 主导 + Armin Ronacher 共同维护，纯 TS/ESM，活跃周更）。�
 - 评审补充的三个非缺口但需重建的行为面：maxTurns/预算护栏 Pi 无内建（回合计数、超限
   中止、错误 subtype 语义全部 adapter 层自研）；文件权限基线 Pi 无内建（Pi 工具无目录
   圈禁，SDK 的 additionalDirectories 基线要在 tool_call guard 重建）；TodoWrite/任务卡
-  无等价物（需自研 todo 工具或明确砍功能）。
+  无等价物（需自研任务进度工具，或明确取消该功能）。
 - 硬性风险已排除：Pi 要求 node ≥22.19，本仓 Electron 41.2.1 内置 Node v24.14.1（实测）。
 
 事实来源与更多细节见 spec：`docs/superpowers/specs/2026-07-30-arch-refactor-pi-runtime-design.md`
@@ -56,7 +56,7 @@ Zechner 主导 + Armin Ronacher 共同维护，纯 TS/ESM，活跃周更）。�
      不默认做；
    - Pi 无 maxTurns/目录圈禁/TodoWrite——预算护栏（订阅 turn_end 计数 + `session.abort()`
      合成 `error_max_turns` 等错误语义）、权限基线（read/write/edit 每次调用 realpath
-     圈禁到 agentCore/novelRoot/project）、任务卡（自研 todo 自定义工具 + 映射）三块
+     圈禁到 agentCore/novelRoot/project）、任务卡（自研任务进度工具 + 事件映射）三块
      adapter 层重建；
    - NovelMemory 核心逻辑抽 `memory-core` 纯库，跑 Electron utilityProcess（**每项目一个
      进程**，随项目打开/关闭生命周期），Pi 工具经内部轻量 RPC 直调；better-sqlite3 ABI
