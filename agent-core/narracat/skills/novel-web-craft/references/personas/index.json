@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "官方说书人 persona 卡。builder 按叙述声音关键词机械选卡，命中卡的正文作为 persona 字段随 WritingContextPack 投递给写手，作为「讲法相近的说书人范本」供参考手感——这本书的声音以 style_directive 为准，卡不替换它。无命中则包内省略 persona。卡是能力层数据：模型无关、可导出、带署名。",
+  "description": "官方声音参考卡。系统按叙述声音关键词选卡；命中卡的正文随 WritingContextPack 提供，未命中时省略 persona。卡只供参考语气、关注点和叙述距离，具体写法服从本书的 style_directive、章纲与作者要求。卡保留署名，可导出，不规定每章采用同一种句式、情绪顺序或结尾。",
   "personas": [
     {
       "id": "storyteller-witty",
