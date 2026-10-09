@@ -39,3 +39,15 @@ newer than the brief. The main workflow must rebuild context and brief before
 dispatch. Dynamic reads leave saved context and manuscripts unchanged. Both
 source preview and runtime delivery require verification; a current source file
 alone does not prove either path.
+
+## Installation verification
+
+Code commit `8da4ce5b` was built and installed at `/Applications/NarraCat.app`
+with client version 0.4.3 and engine version 4.0.185. The signed bundle matched
+3213 build entries. Package boundary, memory, and offline embedding checks passed.
+The installed resolver mapped the historical official body to current source
+text. A temporary old context snapshot also showed the current card in the real
+Agents profiles page, with delivery still disabled. The snapshot was restored;
+all 167 protected novel and settings files matched their pre-install contents.
+The replaced App was deleted after verification. No model writing request,
+notarization, or release publication was performed.
