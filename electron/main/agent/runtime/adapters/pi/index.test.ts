@@ -106,6 +106,7 @@ test('each craft source combination reaches the main agent and dispatched writer
     const pack = join(projectPath, '.narracat/context-packs/ch-001.json')
     await writeFile(pack, JSON.stringify({ craft_pack_hints: [{ reference_path: reference }], persona: 'Keep voice', style_directive: 'Keep style', chapter_outline: 'Keep plot' }))
     const library = join(process.cwd(), 'agent-core/narracat/skills/novel-web-craft/SKILL.md')
+    const libraryContent = await readFile(library, 'utf8')
     for (const craftLibraryEnabled of [true, false]) for (const craftReferencesEnabled of [true, false]) {
       await writeFile(join(projectPath, '.narracat/writer-prompts.json'), JSON.stringify({ ...defaultWriterPromptSettings(), craftLibraryEnabled, craftReferencesEnabled }))
       const options = await createPiAdapter().createRunOptions(makeRunConfig({ appRoot: process.cwd(), projectPath, loadNarraCatRuntime: true, allowedTools: ['Read', 'Agent'] })) as PiRunOptions
@@ -118,7 +119,12 @@ test('each craft source combination reaches the main agent and dispatched writer
           const result = await reader!.execute('craft-read', { path }, undefined, undefined, {} as never)
           return result.content.map((part) => part.type === 'text' ? part.text : '').join('')
         }
-        expect((await text(library)).includes('开篇即抓人')).toBe(craftLibraryEnabled)
+        const deliveredLibrary = await text(library)
+        if (craftLibraryEnabled) expect(deliveredLibrary).toBe(libraryContent)
+        else {
+          expect(deliveredLibrary).not.toBe(libraryContent)
+          expect(deliveredLibrary).toContain('本书已关闭网文写作手艺')
+        }
         expect((await text(reference)).includes('SELECTED-CRAFT-CONTENT')).toBe(craftReferencesEnabled)
         const delivered = await text(pack)
         expect(delivered.includes('craft_pack_hints')).toBe(craftReferencesEnabled)

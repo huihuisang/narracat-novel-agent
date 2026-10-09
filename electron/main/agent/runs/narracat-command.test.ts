@@ -255,19 +255,17 @@ describe('NarraCat command run resolver', () => {
     expect(continuityEditorSource).toContain('报告')
   })
 
-  test('requires chapter-writer to load the natural-language chapter brief, not WritingContextPack', async () => {
+  test('limits chapter-writer inputs to the brief or explicitly supplied rewrite context', async () => {
     const agentsRoot = join(process.cwd(), 'agent-core', 'narracat', 'agents')
     const chapterWriterSource = await readFile(join(agentsRoot, 'chapter-writer.md'), 'utf-8')
 
-    // 一热一冷重构：写手只读任务书，不再读 WritingContextPack
-    expect(chapterWriterSource).not.toContain('WritingContextPack')
     expect(chapterWriterSource).toContain('任务书')
+    expect(chapterWriterSource).toContain('重写任务直接提供上下文包时')
     // 上下文不可用即停，不凭记忆补（措辞可带 markdown 强调，故分别断言「停止」「报告」而非连写）
     expect(chapterWriterSource).toContain('停止')
     expect(chapterWriterSource).toContain('报告')
-    // 唯一上下文来源（措辞含 markdown 强调，分别断言关键词而非连写）
-    expect(chapterWriterSource).toContain('唯一')
-    expect(chapterWriterSource).toContain('来源')
+    expect(chapterWriterSource).toContain('全部输入')
+    expect(chapterWriterSource).toContain('不要去翻项目里的其它文件')
   })
 
   test('enforces the per-agent write permission model in writing agents', async () => {
