@@ -10,14 +10,14 @@ allowed-tools: [Agent, Read, Grep, Glob, AskUserQuestion, "mcp__narracat_memory_
 
 **v1 范围限定**：本命令目前只支持同步**目前完成写作的最新一章**；更早的章节暂不支持，见步骤 0。
 
-**对作者说话**：你内部用精确的字段 / 文件 / 工具 / agent 名保证引擎正确，但作者会读到的文本（对话叙述、AskUserQuestion 的问题与选项、报告正文）里不出现内部标识——schema 字段名、文件 / 目录名（`manuscript/`、`*.md`）、工具名、agent 名、工程黑话（落盘 / 回滚 / 事实 等）一律翻成作者词汇，信息全留、黑话全译。对照表见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/user-facing-language.md`。
+**对作者说话**：内部保留准确的字段、路径、工具与角色标识；对话、问题选项和报告使用作者能理解的说法，说明结果、影响和下一步。译名与展示边界见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/user-facing-language.md`。
 
 ## 步骤 0：定位与前置检查
 
 1. 解析 $ARGUMENTS：第一个数字为 chapter_num。无数字 → 用 AskUserQuestion 问作者要同步哪一章。
 2. 读 `.narracat/state.yaml`：取 `progress.completed_chapters`，记下其中最大章号为 `last_completed_chapter`。
    - chapter_num 不在 `completed_chapters` 里 → 告知作者"这一章还没有完成写作，正文修改会在写作或重写时自然入库，不需要单独同步"，终止。
-3. **前置检查（v1 范围限定）**：chapter_num 必须等于 `last_completed_chapter`（即目前完成写作的最新一章）。不相等 → 用作者词汇如实告知："你的正文修改已经保存，不受影响。但目前只有最新完成的一章支持同步记忆——更早章节的记忆牵连其后所有章节，这个能力还在路上。想让这一章的剧情变化真正进入后续创作，可以对它使用重写。"然后终止，不查看文件、不碰任何记忆。
+3. **前置检查（v1 范围限定）**：chapter_num 必须等于 `last_completed_chapter`（即目前完成写作的最新一章）。不相等 → 告知作者："正文修改已保存。目前只能单独同步最新完成的一章；更早章节的剧情记录会影响后续内容。若要重新记录更早章节的剧情，可使用重写；重写会重新生成正文，请先保留手改稿。"然后终止，不查看文件、不碰任何记忆。
 4. 用 Glob 按 `manuscript/vol-*/ch-{chapter_num 补零三位}.md` 定位该章正文文件（卷目录前缀不定，章号文件名固定三位数字补零）。
    - 未找到匹配文件（进度显示已完成但文件缺失）→ 报错"记录与实际文件不一致"，终止。
    - 找到即 Read 全文（这是作者改过的新正文），记为「正文文件路径」供后续步骤引用。
@@ -34,7 +34,7 @@ allowed-tools: [Agent, Read, Grep, Glob, AskUserQuestion, "mcp__narracat_memory_
 
 ## 步骤 2：报告与确认
 
-把影响清单用作者词汇摆出来（哪些事实变了 / 失效 / 有无矛盾嫌疑及原因）。
+把影响清单用作者词汇摆出来（哪些剧情信息变了、哪些旧记录需要移除，以及可能的矛盾和依据）。
 
 然后 AskUserQuestion："确认同步记忆" / "取消"。取消 → 终止，不做任何修改。
 
@@ -47,7 +47,7 @@ allowed-tools: [Agent, Read, Grep, Glob, AskUserQuestion, "mcp__narracat_memory_
    Task(memory-keeper): "第 {chapter_num} 章正文经作者修改后重新入库。
    正文路径: {步骤 0 定位的正文文件路径}
    本章调 novel_commit_chapter 与 novel_submit_extraction。
-   只提取正文明写的事实，不脑补。"
+   只提取正文明写的事实，不推断未写出的关系或事件。"
    ```
 
    若本章是其所在 arc 或卷的末章（用 `novel_get_arc(chapter=chapter_num)` 查边界），在派发中追加："本章到达 {arc|volume} {scope_id} 边界（第 {start}-{end} 章），另调 novel_consolidate 刷新该区间摘要。"
@@ -72,5 +72,5 @@ allowed-tools: [Agent, Read, Grep, Glob, AskUserQuestion, "mcp__narracat_memory_
 | 章节非目前完成写作的最新一章（v1 范围限定） | 步骤 0 前置检查终止：如实告知作者正文修改已保存、不受影响，更早章节暂不支持同步记忆，可对该章使用重写 |
 | 正文文件缺失（进度显示已完成但文件不存在） | 步骤 0 报错终止，提示记录与实际文件不一致，需人工确认 |
 | 记忆回滚失败 | 终止并报告，不继续 |
-| 重新提取失败（连续两次） | 先调 `novel_restore_progress(chapter=chapter_num)` 恢复进度（防止写作流覆盖正文），再终止并报告：本章记忆已清空但尚未按新正文重新记住，可直接重试本命令（进度已恢复，重试可通过前置检查） |
+| 重新提取失败（连续两次） | 先调 `novel_restore_progress(chapter=chapter_num)` 恢复进度（防止写作流覆盖正文），再终止并报告：本章记忆已清空但尚未按新正文重新记录，可直接重试本命令（进度已恢复，重试可通过前置检查） |
 | 作者取消确认 | 终止，不做任何修改 |

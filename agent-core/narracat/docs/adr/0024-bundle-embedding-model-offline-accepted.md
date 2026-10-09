@@ -16,7 +16,7 @@ ADR-0023 修好了加载并选定 bge-base，但模型仍按 transformers.js 默
 | **q8（本 ADR 选）** | **98MB** | 69.2% | 77.3% | 77.4 |
 | bge-small fp32（对照） | 90MB | 62.1% | 75.6% | 69.0 |
 
-q8 仅比 fp32 低约 3pp recall / 5pp MRR，但体积省 290MB；且 98MB ≈ bge-small 体积却高 7pp——是打包性价比甜点。dev 与 prod 统一 q8（维度仍 768，向量表/迁移逻辑不变）。
+q8 仅比 fp32 低约 3pp recall / 5pp MRR，但体积省 290MB；且 98MB ≈ bge-small 体积却高 7pp——在本次质量与体积取舍中较合适。dev 与 prod 统一 q8（维度仍 768，向量表/迁移逻辑不变）。
 
 ## 加载来源切换
 
@@ -30,14 +30,14 @@ q8 仅比 fp32 低约 3pp recall / 5pp MRR，但体积省 290MB；且 98MB ≈ b
 
 ## Considered Options
 
-- **方案 A（采纳）构建期下载到 build/ + extraResources 打包**：与现有内嵌 Node runtime 完全同套路；仓库不背二进制；安装包自带模型。
+- **方案 A（采纳）构建期下载到 build/ + extraResources 打包**：与现有内嵌 Node runtime 完全同套路；仓库不保存模型二进制；安装包自带模型。
 - **方案 B 模型二进制提交进 git**：仓库永久膨胀近百 MB，否决。
 - **方案 C 维持运行时下载**：零打包改动，但首跑需联网 + 388MB（或 98MB）下载，桌面体验差，正是本 ADR 要消除的。
 - **打包 fp32 而非 q8**：质量 +3pp 但安装包 +388MB（vs +98MB）。桌面端体积优先，q8 性价比胜出；future 若要更高质量可换 fp32（仅改 prepare 文件清单 + embedding.ts dtype）。
 
 ## Consequences
 
-- 安装包体积 +~98MB；首次 /write 秒出、全程离线（不再触发 HF 下载）。
+- 安装包体积 +~98MB；首次使用本地 embedding 不再等待 HF 下载；离线范围仅指记忆向量模型，不包括写作 LLM 请求。
 - dev 态未跑 prepare 脚本时 `resolveEmbeddingModelPath` 返回 undefined → MCP server 回退按需下载，开发体验不变。
 - 维度仍 768，不影响 ADR-0023 的向量表/`backfillVectors` 迁移逻辑。
 - 打包 `.app` 真机 smoke（确认从 `resources/NarraCatEmbeddingModel` 离线加载、无联网下载）列为 release-gate，与 #127「Run Packaged Agent Runtime Smoke」同级。

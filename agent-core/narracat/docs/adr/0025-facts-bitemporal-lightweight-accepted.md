@@ -2,13 +2,13 @@
 
 **状态**: accepted（2026-06-19）
 
-G4b（#308）要把 facts 时序模型升级以支持时点回溯。读码发现现状已比 issue 设想的高：`from_chapter`（NOT NULL，写入口**代码**从抽取 envelope 取当前章填入，弱模型不碰章号）+ `invalidated_at_chapter` + 折叠判定 `from_chapter <= at AND (invalidated_at_chapter IS NULL OR invalidated_at_chapter > at)` —— **已支持按 `at` 章做时点回溯**（见 `novel_character_state` 的 `at_chapter`）。
+G4b（#308）要把 facts 时序模型升级以支持时点回溯。代码检查表明现有实现已具备部分所需能力：`from_chapter`（NOT NULL，写入口**代码**从抽取 envelope 取当前章填入，弱模型不碰章号）+ `invalidated_at_chapter` + 折叠判定 `from_chapter <= at AND (invalidated_at_chapter IS NULL OR invalidated_at_chapter > at)` —— **已支持按 `at` 章做时点回溯**（见 `novel_character_state` 的 `at_chapter`）。
 
-完整双时间轴（Graphiti）的增量价值**只在 event ≠ ingestion 时**才有：倒叙 / 补叙 / 预叙（第 8 章揭示「其实第 1 章就是卧底」：event=1、ingestion=8）。而要表达这种分离，若让弱模型在抽取时判断「事件发生章」，直接违反弱模型纪律（「代码能算的绝不让 LLM」+ 多判断字段→漂移，G0② 实测铁证）。
+完整双时间轴（Graphiti）的增量价值**只在 event ≠ ingestion 时**才有：倒叙 / 补叙 / 预叙（第 8 章揭示「其实第 1 章就是卧底」：event=1、ingestion=8）。而要表达这种分离，若让弱模型在抽取时判断「事件发生章」，直接违反弱模型纪律（「代码能算的绝不让 LLM」+ 多判断字段→漂移，G0② 的测试结果）。
 
 ## 决策（轻量双轴）
 
-1. **双轴字段**：facts 加 `event_chapter`（事件在故事世界发生的章）。现 `from_chapter` 正名为 **ingestion 语义**（事实被记录 / 抽取章，代码填）——列名保留，避免牵动 rollback / 折叠 / G3 图构建 / G4a 一大片代码。`event_chapter` 默认 = `from_chapter`。
+1. **双轴字段**：facts 加 `event_chapter`（事件在故事世界发生的章）。现 `from_chapter` 正名为 **ingestion 语义**（事实被记录 / 抽取章，代码填）——列名保留，避免牵动 rollback / 折叠 / G3 图构建 / G4a 多处调用代码。`event_chapter` 默认 = `from_chapter`。
 2. **不碰抽取入口、弱模型零新负担**：`event_chapter` 由写入口代码默认填 = 当前抽取章（= `from_chapter`）。`memory-extraction` schema **不变**，弱模型仍只填 `change_type`、不填任何章号。event ≠ ingestion 的填充（倒叙 / 补叙）留作者修订工具 / 后续增量；本切片把列与查询语义立为**接口**。
 3. **`invalidated_by` 指针**：facts 加 `invalidated_by`（指向使其失效的 fact id），与 `invalidated_at_chapter` **并存**（后者仍是折叠 / rollback 的章号依据）。`update` 失效旧值时代码填新 fact id——确定性、即时可用的失效溯源（"被哪条新事实取代"）。
 4. **时点回溯改按 `event_chapter`**：折叠 / 回溯查询的生效判定从 `from_chapter <= at` 改用 `event_chapter <= at`。默认相等 → **零回归**；倒叙事实（event < ingestion）时按 event 回溯才语义正确（"故事世界第 X 章的真实状态"）。

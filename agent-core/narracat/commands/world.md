@@ -4,11 +4,11 @@ argument-hint: <操作描述，如"创建主角"、"主角+反派+力量体系�
 allowed-tools: [Agent, Read, Write, Edit, Glob, Grep, AskUserQuestion, mcp__narracat_memory__novel_checkpoint, mcp__narracat_memory__novel_mint_character_uid, mcp__narracat_memory__novel_list_candidate_characters, mcp__narracat_memory__novel_register_candidate_character]
 ---
 
-调度世界观策展人合成角色档案、世界观设定、关系图谱。一次对话可以同时立项多个对象（如主角 + 反派 + 力量体系），最后一并落盘。
+调度世界观策展人合成角色档案、世界观设定、关系图谱。一次对话可以同时立项多个对象（如主角 + 反派 + 力量体系），确认后一起保存。
 
 步骤 3、4、5、6 各自完成后调用 `novel_checkpoint`（command: "world"，step: 步骤号）。
 
-**对作者说话**：你内部用精确的字段 / 文件 / 工具 / agent 名保证引擎正确，但作者会读到的文本（对话叙述、AskUserQuestion 的问题与选项、报告正文）里不出现内部标识——schema 字段名（如 `antagonistic_force`）、立项卡编号（`§5`/`§7`）、文件 / 目录名（`bible/`、`*.md`）、确定度英文枚举（`canon`/`tentative`/`open`）、agent 名（`world-curator` 等）、工程黑话（落盘 / blocking / payoff_beat 等）一律翻成作者词汇，信息全留、黑话全译。对照表见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/user-facing-language.md`（命令 `/narracat:xxx` 由 App 渲染为动作按钮，不在此列）。
+**对作者说话**：内部保留准确的字段、路径、工具与角色标识；对话、问题选项和报告使用作者能理解的说法，说明结果、影响和下一步。译名与展示边界见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/user-facing-language.md`。
 
 ## 步骤 0: 前置检查
 
@@ -30,7 +30,7 @@ allowed-tools: [Agent, Read, Write, Edit, Glob, Grep, AskUserQuestion, mcp__narr
 
 - $ARGUMENTS 已足够动笔 → 不追问，直接进步骤 3。
 - 能推出的不问：用户已说过的、能从立项卡或题材常识可靠推出的，直接写进草案，留到确认环节核对；只追关键处，推不出又不关键的留白交给策展人。
-- 一次只问一个问题，且必须问具体创作内容（某个设定本身怎么定），不问「你想怎么说 / 先说哪个 / 要不要补充」这类流程问题——流程由你安排，直接从最重要的对象问起，并永远附上你自己的推荐答案（用户回「按你说的」即采纳）。
+- 一次只问一个问题，且必须问具体创作内容（某个设定本身怎么定），不问「你想怎么说 / 先说哪个 / 要不要补充」这类流程问题——流程由你安排，直接从最重要的对象问起，并附上基于已知信息的推荐答案（用户回「按你说的」即采纳）。
 - 用户给抽象标签或说不上来时，不反问偏好：基于已知信息直接给出 2-3 个差异化的具体方案让他挑或改，用户回「按你说的」即采纳。
 - 用户说「直接帮我定」或类似表述 → 立即停止提问，带现有信息进步骤 3。
 - 多个对象（主角、反派、体系…）在同一场对话里聊清，一起带进步骤 3。
@@ -38,7 +38,7 @@ allowed-tools: [Agent, Read, Write, Edit, Glob, Grep, AskUserQuestion, mcp__narr
 
 ## 步骤 3: 派发 world-curator（合成）
 
-先 Glob `bible/world/*.md` 与 `bible/characters/*.md` 取实际路径，`bible/relationships.md` 存在则一并计入，全部逐条列进下面的「既有设定文件」——策展人只读派发指令列出的路径（子会话不共享本会话上下文），漏列的设定就不在冲突检测的比对范围内。create 与 update 都要枚举：新对象同样会撞上既有关系与世界规则。立项卡另有专门一行，不并入这份清单。
+先 Glob `bible/world/*.md` 与 `bible/characters/*.md` 取实际路径，`bible/relationships.md` 存在则一并计入，全部逐条列进下面的「既有设定文件」——策展人只读派发指令列出的路径（子会话不共享本会话上下文），漏列的设定就不在冲突检测的比对范围内。create 与 update 都要枚举：新增内容也需要对照既有关系与世界规则。立项卡另有专门一行，不并入这份清单。
 
 一次 Task 调用覆盖本次全部对象，world-curator 只做内容合成与冲突检测，不落盘、不调用提交工具：
 
@@ -94,7 +94,7 @@ conflicts[] 缺失或无法解析 → 跳过 4.1/4.2，直接走 4.3。
 
 ## 步骤 6: 派发 world-curator（结构化提交，仅角色对象时）
 
-第二次 Task 调用，只传已确认、已定 UID 的清单，专职调用 `novel_submit_state_vocabulary` / `novel_submit_character_entity` 完成结构化半边落盘：
+第二次 Task 调用，只传已确认、已定 UID 的清单，专职调用 `novel_submit_state_vocabulary` / `novel_submit_character_entity` 保存结构化数据：
 
 ```
 Task(world-curator): "操作: 结构化提交

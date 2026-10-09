@@ -1,17 +1,17 @@
 # Domain Docs
 
-工程类 skill 在探索代码前如何消费本仓库的领域文档。
+工程类 skill 查阅 Agent Core 术语、决策与契约的入口。此处的组件路径以 `agent-core/narracat/` 为基准；App 工程规范仍以仓库根文档为准。
 
 ## Before exploring, read these
 
-- **`CONTEXT.md`** at the repo root（项目术语表）
+- **`agent-core/narracat/CONTEXT.md`**（Agent Core 术语表）；涉及 App 时另读仓库根 `CONTEXT.md`
 - **`docs/adr/`** — 阅读与你即将改动的领域相关的 ADR
 
 文件不存在时**静默继续**——不要提示缺失、不要主动建议创建。生产者 skill（`/grill-with-docs`）会在术语或决策真正需要被锁定时懒惰地创建它们。
 
 ## NarraCat 特化
 
-本仓库有独立 `CONTEXT.md` 作为术语表；`CLAUDE.md` 顶部章节仍承担架构说明：
+Agent Core 目录有独立 `CONTEXT.md` 作为术语表；同目录 `CLAUDE.md` 提供架构说明：
 
 - `## 项目概述` — 项目定位（Claude Code Plugin、覆盖范围、命名空间）
 - `## 三层架构` — 用户层 / Agent 层 / 引擎层
@@ -20,7 +20,9 @@
 - `## 文件命名规范` — 用户侧小说项目的文件命名约定
 - `## 核心设计规则` — 写权限隔离 / Prompt 语言 / 数据管线一致性 / SSOT 边界等强约束
 
-`docs/adr/` 当前含：
+ADR 保留决策时的背景、数据和备选方案；后续实现可能已调整。用它理解取舍，具体流程与字段以当前命令、agent、共享契约和 schema 为准，不把历史验收步骤重新注入提示词。
+
+`docs/adr/` 的早期决策包括：
 
 - `0001-skill-injection-layering-deferred.md` — Skill 注入分层 / Subagent 拆分（已搁置）
 - `0002-wallclock-optimization-direction-shifted.md` — 墙钟优化方向调整：MCP 调用层已饱和
@@ -40,8 +42,9 @@ NarraCat 是 single-context layout：
 
 ```
 /
-├── CLAUDE.md                              ← 事实上的 CONTEXT
-├── docs/adr/                              ← 架构决策记录（0001–0010）
+├── CONTEXT.md                             ← Agent Core 术语表
+├── CLAUDE.md                              ← 架构与运行规则
+├── docs/adr/                              ← 架构决策记录
 ├── docs/contracts/                        ← 跨命令共享逻辑契约
 ├── docs/plans/                            ← 设计文档与实施计划
 ├── docs/agents/                           ← 本目录（skill 消费规则）
@@ -53,7 +56,7 @@ Multi-context layout（仓库根存在 `CONTEXT-MAP.md`）不适用本仓库。
 
 ## Use the glossary's vocabulary
 
-输出涉及领域概念（issue 标题、重构提案、假设、测试名）时使用 `CLAUDE.md` 中定义的术语：ChapterBrief / CharacterBrief / WritingContextPack / 写权限隔离 / SSOT 权衡 / earliest missing / estimated_total_chapters 等。**不要漂移到 glossary 明确避开的近义词**。
+输出涉及领域概念（issue 标题、重构提案、假设、测试名）时使用 `CONTEXT.md` 中定义的术语：ChapterBrief / CharacterBrief / WritingContextPack / 写权限隔离 / SSOT 权衡 / earliest missing / estimated_total_chapters 等。**不要漂移到 glossary 明确避开的近义词**。
 
 如果你要用的概念还未被 glossary 收录——这是一个信号：要么你在发明项目不使用的语言（重新考虑），要么真有缺口（记下来给 `/grill-with-docs`）。
 
@@ -65,13 +68,12 @@ Multi-context layout（仓库根存在 `CONTEXT-MAP.md`）不适用本仓库。
 
 ## Schema drift lint
 
-`scripts/schema-drift-lint.mjs` 检测 prompt 文件中与 `schemas/*.json` 真值不一致的版本号引用、以及已弃用字段名残留。CI workflow `.github/workflows/schema-drift-lint.yml` 在 push / pull_request 自动跑。
+`scripts/schema-drift-lint.mjs` 检测 prompt 文件中与 `schemas/*.json` 真值不一致的版本号引用、以及已弃用字段名残留。本地可直接运行脚本；CI 入口以仓库根的工作流与验证规则为准。
 
 **本地运行：**
 
 ```bash
-node scripts/schema-drift-lint.mjs        # 仓库根目录直接调
-npm run lint:schema-drift                 # 通过根 package.json scripts 入口
+node agent-core/narracat/scripts/schema-drift-lint.mjs
 ```
 
 **检测项：**

@@ -6,10 +6,10 @@ Repo: 本仓库（Agent Core cutover 后 agent-core 随本仓库验收，issue �
 
 ## Conventions
 
-- **Create an issue**: `gh issue create --title "..." --body "..."`。多行 body 用 heredoc。
+- **Create an issue**: `gh issue create --title "..." --body-file -`，多行正文通过 heredoc 传入。
 - **Read an issue**: `gh issue view <number> --comments`，用 `jq` 过滤评论并抓取 label。
 - **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'`，按需加 `--label` / `--state` 过滤。
-- **Comment on an issue**: `gh issue comment <number> --body "..."`
+- **Comment on an issue**: `gh issue comment <number> --body-file -`，保留正文的实际换行。
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 

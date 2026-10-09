@@ -4,7 +4,7 @@
 
 本地 embedding 从 `shibing624/text2vec-base-chinese`（768 维、`dtype:q8`）换为 `Xenova/bge-base-zh-v1.5`（768 维、`dtype:fp32`、CLS pooling）。根因实测：text2vec 仓库在 transformers.js 下加载必败——`dtype:q8` 找的 `model_quantized.onnx` 该仓库不存在，且文件布局不符 transformers.js（`tokenizer.json` 在 `onnx/` 子目录、root 缺）。结果 `getExtractor()` 每次 catch、`initFailed=true`、`embed()` 恒返回 null、`memory_vec` 永不写入，hybrid 检索一直静默降级为纯 FTS——「查得通」的语义召回（semantic_context / 相似度路）实际从未上线。佐证：缓存 `~/.narracat/models/shibing624/...` 只有 config、无 onnx 权重；真实 dogfood 库 novel-3615 的 `memory_vec` 行数实测为 0。
 
-选型不凭口碑，而是**在真实小说记忆语料上横向实测三个候选再定**。
+选型依据是**三个候选在真实小说记忆语料上的对比结果**。
 
 ## 横向对比（真实数据驱动）
 
@@ -17,14 +17,14 @@
 | **bge-base-zh-v1.5（采纳）** | **768** | **72.1%** | **80.3%** | **82.7** | **80.8%** | 389MB | 49ms/篇 |
 | Qwen3-Embedding-0.6B（q8） | 1024 | 49.8% | 63.5% | 64.4 | 40.8% | 596MB | 84ms/篇 |
 
-结论：bge-base 全维度最优，且 768 维 = 既有 `memory_vec` 维度，免维度重建。Qwen3 反而垫底——已排除 harness 因素（补 EOS 的正确 last-token 用法、升 fp16 精度均未翻盘，最佳 R@5≈50%），结构性原因是 LLM 式 last-token embedding 强在长文本/指令检索，而本场景是**短中文事实三元组**，bge-zh 这类专训中文句相似度的编码器更对路；且 Qwen3 最重最慢、对桌面端内嵌 MCP 不友好。FTS-only 仅 14.7% 印证降级之害。
+结论：bge-base 全维度最优，且 768 维 = 既有 `memory_vec` 维度，免维度重建。Qwen3 在该测试集上的指标最低——已排除 harness 因素（补 EOS 的正确 last-token 用法、升 fp16 精度均未翻盘，最佳 R@5≈50%）；一种解释是 LLM 式 last-token embedding 强在长文本/指令检索，而本场景是**短中文事实三元组**，bge-zh 这类专训中文句相似度的编码器更适合本次短中文语料；且 Qwen3 最重最慢、对桌面端内嵌 MCP 不友好。FTS-only 的 R@5 为 14.7%，显示降级会影响该样本的召回。
 
 ## Considered Options
 
 - **方案 A（采纳）`Xenova/bge-base-zh-v1.5`**：实测查准最高，且 768 维免迁移重建。代价 = 389MB 下载、49ms/篇（写入侧每章约 +2s，可接受）。
 - **方案 B `bge-small-zh-v1.5`**：体积/速度最优（91MB、8ms），但查准 −10pp 且需 512 维迁移。桌面端资源极敏感时的退路。
 - **方案 C `Qwen3-Embedding-0.6B`**：MTEB 高分模型，但在我们真实数据 + 桌面约束下查准垫底且最重，否决。佐证「凭口碑选型不可靠，必须实测」。
-- **方案 D 修好 text2vec 加载**：对非 transformers.js 打包的仓库强行指定 dtype/文件名 + subfolder 绕过布局不符——脆弱 hack 且质量未必如 bge。否决。
+- **方案 D 修好 text2vec 加载**：对非 transformers.js 打包的仓库强行指定 dtype/文件名 + subfolder 绕过布局不符——需要额外维护的适配 且质量未必如 bge。否决。
 - **`dtype` 选 fp32 而非量化**：fp32（389MB）权重确定存在、质量无损；bge-base q8（约 100MB）可作后续下载体积优化，但需一次快速 re-eval 确认量化不掉点，本次不引入。
 - **pooling 保持 mean / 查询加 bge 检索指令前缀**：bge 原生池化是 CLS，改 CLS；查询指令对 v1.5 收益边际且破坏 `embed()` 单入口对称性，不加。
 

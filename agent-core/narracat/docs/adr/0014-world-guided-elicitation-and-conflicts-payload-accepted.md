@@ -2,12 +2,12 @@
 
 **状态**: accepted（2026-05-31）
 
-`/world` 长期是「固定模板 + world-curator 一次性产出 + 用户审改」，与 setup（5 步引导）/ plan 阶段一（双路 fallback）模式反差。#123 提议引入渐进式引导，#217 提议 world-curator 冲突检测结构化输出 `conflicts[]`，两者在 `world.md` 步骤 4「确认门」硬耦合（ADR-0013 已把「步骤 4 确认粒度过粗」delegate 给 #123）。本 ADR 记录这次合并 grill 的两个反直觉决策：**(1) 引导式采集只对高 stakes create 操作开放；(2) conflicts[] 用返回 payload 约定承载，不新建 schema 文件。**
+`/world` 长期是「固定模板 + world-curator 一次性产出 + 用户审改」，与 setup（5 步引导）/ plan 阶段一（双路 fallback）模式反差。#123 提议引入渐进式引导，#217 提议 world-curator 冲突检测结构化输出 `conflicts[]`，两者在 `world.md` 步骤 4「确认门」硬耦合（ADR-0013 已把「步骤 4 确认粒度过粗」delegate 给 #123）。本 ADR 记录这次合并 grill 的两项决策：**(1) 引导式采集只对高 stakes create 操作开放；(2) conflicts[] 用返回 payload 约定承载，不新建 schema 文件。**
 
 ## 背景
 
-- **反流程纪律压力**：CLAUDE.md「提质量优先拿掉噪声 + 信任模型，而非加规则 / 门禁 / 流程」、MEMORY.md「提质量靠产出不靠流程」。给一个低频命令全程加多步引导，是反流程纪律第一刀该砍的地方。
-- **代码层事实**：`agents/world-curator.md` frontmatter 的 `tools:` 只有 `Read/Grep/Glob` + 3 个 MCP 读工具，**没有 AskUserQuestion**——world-curator 在本仓库 literally 无法向用户提问，其自称「采用引导式对话方式工作」名实不符。引导只能由主会话承担。
+- **反流程纪律压力**：CLAUDE.md「提质量优先拿掉噪声 + 信任模型，而非加规则 / 门禁 / 流程」、MEMORY.md「提质量靠产出不靠流程」。给一个低频命令全程加多步引导，需要先证明逐步引导的必要性。
+- **代码层事实**：`agents/world-curator.md` frontmatter 的 `tools:` 只有 `Read/Grep/Glob` + 3 个 MCP 读工具，**没有 AskUserQuestion**——world-curator 没有直接向用户提问的工具，其自称「采用引导式对话方式工作」名实不符。引导只能由主会话承担。
 - **数据契约惯例压力**：CLAUDE.md「数据契约 SSOT 在 `schemas/`」。`conflicts[]` 是 world-curator→主会话的结构化输出，惯例上「应该」立 schema。但它只有主会话步骤 4 一个消费者，且 `/world` 本就标注「暂无强 schema」。
 
 ## 决策
@@ -35,7 +35,7 @@
 - **（采纳）操作类型轴 + 开场单问定深浅**：高 stakes create 给选择权，update/view 不变。克制且可预测。
 
 **决策 B 的备选：**
-- **新建 `schemas/world-conflicts.json`**：符合「数据契约 SSOT 在 schemas/」惯例，但 conflicts[] 只有一个消费者，独立 schema 过重，且触发 schema-pr-check CI「下游影响」评估流程，blast radius 反而更大。否决。
+- **新建 `schemas/world-conflicts.json`**：符合「数据契约 SSOT 在 schemas/」惯例，但 conflicts[] 只有一个消费者，独立 schema 过重，且触发 schema-pr-check CI「下游影响」评估流程，影响范围反而更大。否决。
 - **（采纳）payload 约定 + 写进契约文档**：守住 #123「不碰 schema」边界，不触发 CI 下游影响门，结构定义集中在 world-curator.md + 契约文件。
 
 ## Consequences

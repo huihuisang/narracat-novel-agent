@@ -1,8 +1,10 @@
-# Epic #21（ADR-0004）端到端验证指南
+# Epic #21（ADR-0004）历史端到端验证指南
 
+> 本文保留 2.5.0 时期的验收步骤，不适用于当前 Agent Core。单元选项、阶段零锚点和九维审校均为旧版流程；当前验证入口见仓库根 `docs/agents/verification.md`。
+>
 > 适用范围：Epic #21（S1-S7 已合并）完成后，在真实小说项目中跑通完整 /plan + /write + /review 闭环，确认所有新结构生效。
 >
-> 来源：Epic #21 S8 阶段产出。本会话已完成 schema 校验 + CLAUDE.md 同步 + legacy-migration.md；本指南把 E2E 实跑步骤交付用户。
+> 来源：Epic #21 S8 阶段产出。当时已完成 schema 校验、CLAUDE.md 同步和 legacy-migration.md；下文是交付的 E2E 实跑步骤，不代表已完成实跑。
 
 ## 0. 准备
 

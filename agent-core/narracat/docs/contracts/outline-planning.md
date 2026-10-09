@@ -10,7 +10,7 @@
 
 1. 用 Glob 扫描 `outline/vol-*/ch-*.md`
 2. 从文件名解析章号集合 `C_outlined`（格式 `outline/vol-{VV}/ch-{NNN}.md`，VV 两位补零卷号、NNN 三位补零章号；解析失败的文件名跳过并提示，不阻断）
-3. 不读、不维护任何缓存字段——细纲文件由 `novel_submit_chapter_outline` 机械渲染，文件即状态；任何中断后重跑，本扫描自动得到正确状态（idempotent 自愈）
+3. 不读、不维护任何缓存字段——细纲文件由 `novel_submit_chapter_outline` 机械渲染，文件即状态；任何中断后重跑，本扫描自动得到正确状态（幂等恢复）
 
 调用点：`/narracat:plan` 模式判定前。`/narracat:write` 入口对单章细纲的存在性检查与本节同源（直接查文件）。
 
@@ -35,7 +35,7 @@
 | `C_missing == ∅` 且 `C_planned` 章数 < 预算总章数（`novel_get_structure_budget`） | 补卷：还有未规划的卷（§4） |
 | `C_missing == ∅` 且规划已覆盖预算总章数 | 全部完成 |
 
-**叙事断点（窗口收口点）：** 派发以章为粒度的窗口 `[start, target]`，`target` 是从 `start` 起最近的一个**叙事断点**——剧情上自然成段的收口章。断点取自结构化大纲数据（书级 `storylines` 的 `entry_chapter` / `planned_payoff_chapter`、伏笔注册表的 `planted_chapter` / `target_reveal` 章号锚点、arc 的 payoff_beats 兑现点、arc 的 `chapter_end`=arc 闭合），每个断点带一句剧情理由（如「SL-02 入场」「F-MED-05 兑现点」「V01-A02 闭合」）。collaborative 档的断点候选由 outline-architect 读结构化大纲推算并提供，不在主会话硬算；auto 档不产候选，`target` 按 §3 的机械规则直接取 arc 闭合章。
+**叙事断点（窗口收口点）：** 派发以章为粒度的窗口 `[start, target]`，`target` 是从 `start` 起最近的一个**叙事断点**——剧情上自然成段的收口章。断点取自结构化大纲数据（书级 `storylines` 的 `entry_chapter` / `planned_payoff_chapter`、伏笔注册表的 `planted_chapter` / `target_reveal` 章号锚点、arc 的 payoff_beats 兑现点、arc 的 `chapter_end`=arc 闭合），每个断点带一句剧情理由（内部可记录故事线、伏笔与 arc 的标识；展示时写成具体剧情理由，如「追查的证人首次出场」「失踪案揭晓」「本轮谈判结束」）。collaborative 档的断点候选由 outline-architect 读结构化大纲推算并提供，不在主会话硬算；auto 档不产候选，`target` 按 §3 的机械规则直接取 arc 闭合章。
 
 **约束：**
 
@@ -49,14 +49,14 @@
 
 **窗口选取：**
 
-- **手动模式（collaborative）：** outline-architect 依结构化大纲提供从 `start` 起的若干「产到第 N 章（断点理由）」候选（按章号升序、各满足最小前瞻窗口）；主会话经 AskUserQuestion 用人读中文标题（如「产到第 52 章 · F-MED-05 兑现」）让作者选定一个 `target`，另附「暂不细化」。断点理由是人读说明、不裸露主键到标题以外。
-- **auto 模式：** 不询问，也**不派发断点候选**——`target` 由主会话按 arc 闭合章机械算出，零 LLM 裁量：
+- **手动模式（collaborative）：** outline-architect 依结构化大纲提供从 `start` 起的若干「产到第 N 章（断点理由）」候选（按章号升序、各满足最小前瞻窗口）；主会话经 AskUserQuestion 用人读中文标题（如「细化到第 52 章 · 失踪案揭晓」）让作者选定一个 `target`，另附「暂不细化」。问题标题和描述都使用剧情说明，不展示内部主键。
+- **auto 模式：** 不询问，也**不派发断点候选**——`target` 由主会话按 arc 闭合章机械算出，不由 LLM 自行选择：
 
   1. `target` = `earliest_arc.chapter_end`（arc 闭合即引擎设计的剧情收口点：arc 的 `irreversible_change` 在此落地）
   2. 若 `target - start + 1 < 5`（最小前瞻窗口，§2），顺延到下一个 arc 的 `chapter_end`（后续 arc 取法见 §2），重复直至跨度 ≥ 5 章
   3. 无后续 arc（已到规划末尾）→ 取当前 `target`，跨度不足 5 章亦可
 
-  同一项目状态重复跑本命令，铺纲范围必然一致；单次范围被 arc 跨度钉死（tier 档位 S 5-15 / M 10-25 / L 15-35 / XL 20-40 章），成本可预算。auto 档不消费 payoff_beat 兑现点这类更细的断点——确定性优先于断点精细度。
+  同一项目状态重复跑本命令，铺纲范围必然一致；单次范围由 arc 跨度确定（tier 档位 S 5-15 / M 10-25 / L 15-35 / XL 20-40 章），成本可预算。auto 档不消费 payoff_beat 兑现点这类更细的断点——确定性优先于断点精细度。
 
 **单窗口即收口（硬边界）：** 一次命令运行只推进 `[start, target]` 这一个窗口。窗口内全部段提交完成后直接进入完成输出——不重新计算最早缺失章、不取下一个 arc、不追加新窗口；越过 `target` 的任何章一律留给作者下次运行本命令。auto 档同样受此约束（auto 免掉的是询问，不是窗口边界）。
 

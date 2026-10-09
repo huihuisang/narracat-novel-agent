@@ -6,7 +6,7 @@ Skills 用五个 canonical triage 角色。下表把角色映射到本仓库实�
 | ------------------- | ------------------ | ------------------------------------------ |
 | `needs-triage`      | `needs-triage`     | maintainer 需评估此 issue                  |
 | `needs-info`        | `needs-info`       | 等回报者补充信息                           |
-| `ready-for-agent`   | `ready-for-agent`  | 完全规约好，AFK agent 可直接执行           |
+| `ready-for-agent`   | `ready-for-agent`  | 需求与验收明确，可由 agent 独立执行           |
 | `ready-for-human`   | `ready-for-human`  | 需人工实施                                 |
 | `wontfix`           | `wontfix`          | 不会处理（仓库已存在此 label）             |
 
@@ -14,7 +14,7 @@ Skill 提到某角色时（如"apply the AFK-ready triage label"），用此表�
 
 ## 缺失 label 的处理
 
-仓库当前只有 `wontfix` 已存在；其余四个 label 在首次 triage skill 调用时按需创建：
+先查询仓库已有标签；下列标签不存在时才按需创建，不把本文记录当作远端当前状态：
 
 ```
 gh label create needs-triage --description "Maintainer needs to evaluate" --color "fbca04"

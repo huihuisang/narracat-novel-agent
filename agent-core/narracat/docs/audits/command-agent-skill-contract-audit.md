@@ -2,13 +2,15 @@
 
 审查日期：2026-05-30
 
+本文记录该日期的静态审查结果，文中的路径行号、字段与建议对应当时版本，不是当前问题清单。当前职责以 `commands/`、`agents/` 和 `docs/contracts/` 为准；已标记的解决状态保留。
+
 范围：`commands/`、`agents/`、`skills/novel-*`、`schemas/`、`docs/contracts/`、`mcp-server/src/handlers/validators.ts` 中与小说写作链路直接相关的 prompt、契约和 schema。
 
 本次只做静态链路审查；未创建 `<eval 工作区>/command-agent-skill-chain/` 下的 benchmark 小说项目。
 
 ## 总结
 
-当前最强的链路是 `/write`：它已经把 WritingContextPack v2.4、chapter-writer 最小任务 envelope、ChapterMetadata、ReviewReport JSON SSOT、`refine_count` 上限和 memory 回写串成了一个相对稳定的闭环。
+当时最完整的链路是 `/write`：它已经把 WritingContextPack v2.4、chapter-writer 最小任务 envelope、ChapterMetadata、ReviewReport JSON SSOT、`refine_count` 上限和 memory 回写串成了一个相对稳定的闭环。
 
 主要风险集中在三处：
 
@@ -21,7 +23,7 @@
 | 链路 | 主要 producer | 主要 consumer | 结构契约 | 当前判断 |
 | --- | --- | --- | --- | --- |
 | `/plan` | `outline-architect` | `/write`、`chapter-writer`、`continuity-editor` | `OutlineStructure v4.4`、`docs/contracts/outline-planning.md` | 主链健康，但 contract §3.2 对 `scene_type` / `ending_hook_type` 滞后 |
-| `/write` | 主会话聚合 WCP、`chapter-writer`、`continuity-editor`、`memory-keeper` | 下一章写作、review、memory | `WritingContextPack v2.4`、`ChapterMetadata v1.4`、`ReviewReport v1.3` | 最接近目标架构；仅有少量旧版本文案 |
+| `/write` | 主会话聚合 WCP、`chapter-writer`、`continuity-editor`、`memory-keeper` | 下一章写作、review、memory | `WritingContextPack v2.4`、`ChapterMetadata v1.4`、`ReviewReport v1.3` | 当时最接近目标架构；仅有少量旧版本文案 |
 | `/review` | `continuity-editor` | 人读报告、summary、`state.yaml` | Markdown + ReviewReport 概念契约 | 权限缺口和 JSON/Markdown 读取边界需要修 |
 | `/rewrite` | `chapter-writer`、`continuity-editor` | 被重写章节、cascade impact、memory | 应复用 `/write` 契约 | 主要漂移点，建议优先修 |
 | `/world` | `world-curator`、`memory-keeper` | bible、NovelMemory、后续写作 | 暂无强 schema | 能跑，但冲突处理和“建议 vs 确认事实”边界偏弱 |
@@ -178,7 +180,7 @@
 
 ## Benchmark 后续建议
 
-修完 P0/P1 后再跑 benchmark 小说项目更划算。否则链路跑出来的失败会混入 prompt 契约漂移，难以判断是 Agent 写作能力问题，还是命令/工具契约问题。
+修完 P0/P1 后再跑 benchmark 小说项目更便于区分问题来源。否则链路跑出来的失败会混入 prompt 契约漂移，难以判断是 Agent 写作能力问题，还是命令/工具契约问题。
 
 benchmark 项目建议放在：
 

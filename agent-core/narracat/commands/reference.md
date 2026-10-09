@@ -3,13 +3,13 @@ description: 分析参考作品 — 从 bible/references/ 提取项目级参考�
 allowed-tools: [Read, Write, Glob, AskUserQuestion, TaskCreate, TaskUpdate, Skill]
 ---
 
-分析用户提供的参考作品，生成后续 command 可消费的项目级参考指导。
+分析作者提供的参考作品，整理供立项、设定、大纲和文风讨论使用的参考指导。
 
 本命令由主会话直接执行，不派发 subagent。完整覆盖 5 个维度（premise / world / characters / structure / style），产出 `bible/reference-guidance/` 目录下的 6 个文件。
 
 > **职责分工：** `novel-reference-analysis-method` Skill 提供「如何分析」（方法论 + 维度框架）；本命令文档定义「分析结果写到哪里、按什么文件结构组织」（输出路径 + 文件模板）。两者解耦——Skill 不涉及具体路径；本命令不重复分析方法。
 
-**对作者说话**：你内部用精确的字段 / 文件 / 工具名保证引擎正确，但作者会读到的文本（对话叙述、AskUserQuestion 的问题与选项、报告正文）里不出现内部标识——文件 / 目录名（`bible/reference-guidance/`、`*.md`）改说「参考指导（前提 / 世界观 / 角色 / 结构 / 文风参考）」，schema 字段名 / 英文枚举 / 工程黑话同样翻成作者词汇，信息全留、黑话全译。对照表见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/user-facing-language.md`（命令 `/narracat:xxx` 由 App 渲染为动作按钮，不在此列）。
+**对作者说话**：内部保留准确的字段、路径、工具与角色标识；对话、问题选项和报告使用作者能理解的说法，说明结果、影响和下一步。译名与展示边界见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/user-facing-language.md`。
 
 ## 进度跟踪
 
@@ -20,8 +20,8 @@ allowed-tools: [Read, Write, Glob, AskUserQuestion, TaskCreate, TaskUpdate, Skil
 | 检查参考来源 | 检查参考作品… | 0 |
 | 分析参考作品 | 分析参考作品… | 1-2 |
 | 生成参考指导 | 生成参考指导… | 3 |
-| 写入文件 | 写入参考指导… | 4 |
-| 抗抄袭自检 | 自检 style.md… | 4.5 |
+| 保存参考指导 | 保存参考指导… | 4 |
+| 检查引用与专名 | 检查文风参考… | 4.5 |
 
 如 guidance 已存在或 references 为空，可直接提示并结束，不必创建任务列表。
 
@@ -34,9 +34,9 @@ allowed-tools: [Read, Write, Glob, AskUserQuestion, TaskCreate, TaskUpdate, Skil
 1. 确认 `.narracat/config.yaml` 存在。**工具报错 ≠ 文件不存在**：读取工具返回错误时如实报出错误与原因，不要据此推断项目未初始化。确认不存在 → 如实说明这本书的项目文件读不到、本次无法继续；不要自行初始化，也不要建议作者重新建一部，终止
 2. 确认 `bible/references/` 目录存在；不存在 → 提示作者先添加参考作品，终止
 3. 用 Glob 列出 `bible/references/*.md` 和 `bible/references/*.txt`
-   - 文件列表为空 → 提示「`bible/references/` 为空。请添加 `.md` 或 `.txt` 参考作品后重新运行」，终止
+   - 文件列表为空 → 提示「还没有参考作品。请导入 Markdown 或纯文本后再分析」，终止
 4. 检查 `bible/reference-guidance/index.md` 是否已存在
-   - 已存在 → 提示「检测到已有参考作品分析（`bible/reference-guidance/index.md`）。本命令不支持覆盖。请删除整个 `bible/reference-guidance/` 目录后重新运行」，终止
+   - 已存在 → 提示「已有参考分析，本次未覆盖。若需重新分析，请先备份并移除旧的参考指导，再运行此命令」，终止
 
 ### 步骤 1: 显式调用 novel-reference-analysis-method Skill
 
@@ -53,20 +53,20 @@ allowed-tools: [Read, Write, Glob, AskUserQuestion, TaskCreate, TaskUpdate, Skil
    - 仅读 `.md` / `.txt`；遇到其他格式（EPUB/PDF/DOCX）跳过并告知用户「文本导入由 App 或用户文件系统完成」
    - 单文件 > 2 万字时警告，建议截取核心章节
 3. 按 novel-reference-analysis-method Skill 中定义的 5 维度框架，逐文件分析、跨文件融合
-4. 心理输出（不写盘）：5 个维度各自的「注入摘要 / 应该影响的决策 / 可借鉴片段 / 不应继承 / 来源依据」
+4. 内部整理（不写文件）：5 个维度各自的「注入摘要 / 应该影响的决策 / 可借鉴片段 / 不应继承 / 来源依据」
 
 ### 步骤 3: 生成 guidance 文件清单，向用户确认
 
-向用户展示将要写入的 6 个文件清单 + 每个文件的一句话摘要：
+向作者展示参考指导的六部分，以及每部分的一句话摘要；文件路径只在内部使用：
 
 ```
-将写入 bible/reference-guidance/：
-- index.md（索引，{N} 个来源，{date}）
-- premise.md（{一句话摘要}）
-- world.md（{一句话摘要}）
-- characters.md（{一句话摘要}）
-- structure.md（{一句话摘要}）
-- style.md（{一句话摘要}）
+将保存以下参考指导：
+- 来源索引（{N} 个来源，{date}）
+- 创意与前提（{一句话摘要}）
+- 世界观（{一句话摘要}）
+- 人物（{一句话摘要}）
+- 故事结构（{一句话摘要}）
+- 文风（{一句话摘要}）
 ```
 
 AskUserQuestion：「确认写入 / 需要调整某维度」
@@ -83,7 +83,7 @@ if 调整 → 用户提供调整意见，回到步骤 2 重新分析该维度
    - `characters.md`
    - `structure.md`
    - `style.md`（在共用模板之外**额外**包含「## 叙述者腔调」子节，见下文「style.md 专属扩展：叙述者腔调子节」）
-3. 写入完成后输出摘要：「已写入 6 个文件到 `bible/reference-guidance/`」
+3. 写入完成后输出摘要：「六部分参考指导已保存」
 
 ### 步骤 4.5: 抗抄袭自检
 
@@ -117,9 +117,9 @@ if 调整 → 用户提供调整意见，回到步骤 2 重新分析该维度
 
 ```
 参考作品分析完成。建议下一步：
-- /narracat:setup — 立项对话（会自动消费 reference-guidance/premise.md）
-- /narracat:world — 建立角色与世界观（会自动消费 reference-guidance/world.md + characters.md）
-- /narracat:plan — 规划大纲（会自动消费 reference-guidance/structure.md）
+- /narracat:setup — 立项对话（会参考已整理的创意与前提）
+- /narracat:world — 建立角色与世界观（会参考已整理的世界观与人物写法）
+- /narracat:plan — 规划大纲（会参考已整理的故事结构）
 ```
 
 `style.md` 作为叙事风格参考资料保留，供立项时讨论叙述声音与人工改稿查阅。
@@ -211,7 +211,7 @@ if 调整 → 用户提供调整意见，回到步骤 2 重新分析该维度
 {整体气质的「做什么 / 怎么做」连续散文段，全程 paraphrase；不出现专名、不出现 ≥10 字原文}
 
 ### 专属词汇（10-30 个去文本化 tag）
-- {带肌肉感的短动词}
+- {动作词的选择特点}
 - {文白夹杂的虚词}
 - ...
 （每个 tag 描述词汇类型，不写参考作品原词；如必须举例则需明确标注「示意，非作品原词」）
@@ -223,10 +223,10 @@ if 调整 → 用户提供调整意见，回到步骤 2 重新分析该维度
 （每条描述一组结构和坐标系，不写参考作品的具体专名）
 
 ### 标志金句机制（3-5 条机制描述，不是金句库）
-- {机制 1：句长区间 + 嵌入位置 + 语用功能 + 限定条件}
+- {机制 1：表达方式 + 出现情境 + 作用 + 适用边界}
 - {机制 2：...}
 - ...
-（**严禁列出原句**——即使是「最有名的那句」也必须 paraphrase 为机制；示例措辞：「嵌入式 8-15 字短句 + 借次要人物口说出 + 用于场景结尾点睛 + 必带一处辩证转折」）
+（**严禁列出原句**——即使是「最有名的那句」也必须 paraphrase 为机制；示例措辞：「由次要人物在争执结束时说出朴素判断，让先前行为产生新的含义；仅在前文已形成相关矛盾时适用，不要求每场戏以此结尾」）
 
 ### 不应继承
 - 专名：{enumerate 参考作品的人名 / 地名 / 物品名 / 门派 / 招式名等具体专有名词}

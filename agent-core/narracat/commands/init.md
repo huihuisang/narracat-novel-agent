@@ -50,11 +50,11 @@ checkpoint:
   timestamp: null
 ```
 
-7. 调用 `novel_query(query="connection test")` 自检 NovelMemory 连接。失败不终止，输出排查提示：确认 mcp-server 已编译（`cd mcp-server && npm run build`）、`.narracat/config.yaml` 已生成。
-8. 输出摘要：创建的目录与文件清单、novel_id，并提示下一步：
+7. 调用 `novel_query(query="connection test")` 自检 NovelMemory 连接。失败不终止，说明项目已创建，但暂时无法读取记忆服务。内部排查 mcp-server 是否已编译（`cd mcp-server && npm run build`）、`.narracat/config.yaml` 是否已生成；面向作者按语言契约表达。
+8. 输出摘要：书名、项目是否已创建、连接检查结果，并提示下一步。novel_id 和文件清单留作内部记录：
 
 ```
 项目初始化完成。建议下一步：
  - /narracat:setup — 立项对话
-如有参考小说，可先把 .md / .txt 放入 bible/references/，再运行 /narracat:reference 生成参考指导（可选）。
+如有参考小说，可先导入 Markdown 或纯文本，再运行 /narracat:reference 分析写法（可选）。
 ```

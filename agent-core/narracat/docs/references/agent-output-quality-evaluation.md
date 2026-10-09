@@ -1,11 +1,13 @@
 # AI Agent 输出质量验证：业界调研
 
 > 日期：2026-02-20
-> 用途：NarraCat Agent/Skill 质量验证方案设计的参考依据
+> 用途：NarraCat Agent/Skill 质量验证方案设计的历史参考
+>
+> 使用边界：数据、链接和产品判断对应 2026-02-20 的整理，此次未重新核验来源。下文的评估层次、字段和阈值属于当时建议，不能直接作为当前生成或审校规则。
 
 ## 核心结论
 
-1. **无银弹**：业界共识是多层防线组合，没有单一方案能解决所有问题
+1. **组合验证**：本次资料支持结合多种方法验证，单一方案不能覆盖所有问题
 2. **LLM-as-Judge 是主流**：53.3% 的团队采用，与人类一致性约 80%
 3. **创意写作是最难自动化评估的领域**：推荐 AI + 人类混合评估
 4. **评估基准数据（ground truth）是核心瓶颈**：没有基准就无法校准任何评估器
@@ -171,7 +173,7 @@ continuity-editor 对 chapter-writer 的五维度审校。强化方向：
 
 ### 5.1 WritingBench 核心机制
 
-WritingBench（2025，阿里 X-PLUG）是目前最全面的写作评估基准，核心创新：
+WritingBench（2025，阿里 X-PLUG）是本次调研采用的写作评估基准之一，核心创新：
 
 ```
 写作任务（query）→ LLM 动态生成 5 条评估标准（name + description + scoring rubric）→ Critic Model 逐条打分（1-10）+ 理由 → 汇总
@@ -234,4 +236,4 @@ WritingBench 的 query 是一段写作指令。NarraCat 的 WritingContextPack �
 ### 5.5 常驻维度
 
 无论章节类型，以下维度始终包含在 evaluation_focus 中：
-- **句式多样性**（novel-antipattern A1）：短句排比是最高频的 AI 写作痕迹，必须每章检查
+- **句式多样性**（novel-antipattern A1）：关注是否因重复句式而难读；短句和排比本身不能判定为 AI 痕迹，需结合语境
