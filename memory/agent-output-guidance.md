@@ -37,6 +37,14 @@ predictions against the update window and the next chapter's event schedule.
 Review action motives and speaker attribution before adding stylistic rules.
 The review did not modify the author's chapter or outline.
 
+At the author's request, these findings now inform `novel-web-craft/SKILL.md`.
+Existing dialogue, action, and recap entries were updated; four optional entries
+cover sentence meaning, evidence and counts, time and rules, and a clear question
+for each investigation. The compressor still selects 2-3 relevant entries and
+converts them to chapter-specific guidance. Source engine version is 4.0.189;
+the installed App remains 4.0.188. Reading and delivery checks do not establish
+the quality of a generated chapter.
+
 On 2026-10-11, the author reported that output remained difficult to read.
 The selected chapter 3 outline was unchanged: a request to revise it had led
 to the generic planning button and then to new chapter outlines 44-64.
