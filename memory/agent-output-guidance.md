@@ -28,6 +28,15 @@ a missing payment record does not prove that money has no source. The author
 requested this treatment for chapter outlines 1-3 on 2026-10-11. Their prose
 fields were revised directly, without changing the manuscript or App resources.
 
+A chapter 4 review on 2026-10-11 found that plain wording alone did not resolve
+unsupported conclusions inherited from its outline. Keep group membership,
+message readership, and belief counts separate. An unverified recording is a
+possible anomaly, not a confirmed rule activation. A report timestamp measures
+reporting time unless activation time is independently known. Check future
+predictions against the update window and the next chapter's event schedule.
+Review action motives and speaker attribution before adding stylistic rules.
+The review did not modify the author's chapter or outline.
+
 On 2026-10-11, the author reported that output remained difficult to read.
 The selected chapter 3 outline was unchanged: a request to revise it had led
 to the generic planning button and then to new chapter outlines 44-64.
