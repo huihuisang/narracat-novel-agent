@@ -1,5 +1,6 @@
 import { NARRACAT_ENGINE_AGENT_IDS } from './agent-core-contract.ts'
 import { parseAgentFile } from './assemble-agent-skills.ts'
+import { withAgentOutputGuidance } from './agent-output-guidance'
 import type { ProseOverrideEntry } from '@shared/types/prose-block'
 
 export interface EngineAgentDefinition {
@@ -52,7 +53,7 @@ export async function resolveEngineAgentDefinitions({
       console.warn(`[narracat] agent override 形状非法，回落引擎默认：${agentId}`)
     }
     if (override) {
-      registry[agentId] = override
+      registry[agentId] = { ...override, prompt: await withAgentOutputGuidance(override.prompt, agentCorePath) }
       continue
     }
     const parsed = await parseAgentFile(agentCorePath, agentId, proseOverrides)

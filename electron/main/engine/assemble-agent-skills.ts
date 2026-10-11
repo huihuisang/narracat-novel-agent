@@ -15,6 +15,7 @@ import { parse as parseYaml } from 'yaml'
 import { applyProseOverrides } from '@shared/lib/prose-blocks'
 import type { ProseOverrideEntry } from '@shared/types/prose-block'
 import { expandEngineRoot } from './engine-path-vars.ts'
+import { withAgentOutputGuidance } from './agent-output-guidance'
 
 /** 运行时中立的子 agent 定义：description/prompt 必填全量组装，tools/model 可选。 */
 export interface AssembledAgentDefinition {
@@ -74,8 +75,8 @@ export async function parseAgentFile(
     // 散文覆盖 + 移除标记。注意：即使没有任何 override 也必须过这一步——标记服务于作者与守卫，
     // 模型不该看到 HTML 注释。applyProseOverrides 是纯函数不抛，故无需额外兜底。
     const applied = applyProseOverrides(expandEngineRoot(body.trim(), agentCorePath), proseOverrides ?? {})
-    const prompt = applied.text
-    if (!description || !prompt) return null
+    if (!description || !applied.text.trim()) return null
+    const prompt = await withAgentOutputGuidance(applied.text, agentCorePath)
 
     const result: ParsedAgentFile = { description, prompt }
     if (typeof parsed.model === 'string' && parsed.model.trim()) result.model = parsed.model.trim()

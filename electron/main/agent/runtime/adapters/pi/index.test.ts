@@ -50,6 +50,7 @@ test('default source choices load current user card text in main and child sessi
     await writeFile(pack, JSON.stringify({ persona: 'OLD-USER-VOICE', chapter_outline: 'Plot facts' }))
     await writeFile(join(projectPath, '.narracat/capability-receipts/ch-001.json'), JSON.stringify({ chapter: 1, entries: [{ type: 'persona', card_id: 'mine', pack_id: 'my-voice', pack_version: '1.0.0', origin: 'user' }] }))
     const options = await createPiAdapter().createRunOptions(makeRunConfig({ appRoot: process.cwd(), userDataPath, projectPath, loadNarraCatRuntime: true, allowedTools: ['Read', 'Agent'] })) as PiRunOptions
+    expect(options.systemPromptAppendix).toContain('## 通用输出规范')
     capturedChildSessionCalls = []
     await options.customTools.find((tool) => tool.name === 'Task')!.execute('voice-tc', { subagent_type: 'chapter-writer', prompt: 'Write the chapter.' }, undefined, undefined, {} as never)
     for (const session of [options, capturedChildSessionCalls[0].options]) {
@@ -89,6 +90,8 @@ test('each profile applies its per-book persona and requirement switches to disp
     for (const { agentId, block } of sources) {
       await task.execute(`task-${agentId}`, { subagent_type: `narracat:${agentId}`, prompt: 'Run the assigned task.' }, undefined, undefined, {} as never)
       const child = capturedChildSessionCalls.at(-1)!.options
+      expect(child.systemPrompt).toContain('## 通用输出规范')
+      expect(child.systemPrompt.match(/## 通用输出规范/g)).toHaveLength(1)
       expect(child.systemPrompt).toContain(`Keep request ${agentId}`)
       expect(child.systemPrompt).not.toContain(`Omit request ${agentId}`)
       expect(child.systemPrompt).not.toContain(`Custom persona ${agentId}`)

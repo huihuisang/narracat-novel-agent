@@ -49,6 +49,7 @@ import { createPiToolCallNameNormalizer } from './pi-toolcall-name-normalizer.ts
 import { readWriterPromptSettings } from '../../../../novel/writer-prompts.ts'
 import { resolveBookAgentOverrides } from '../../../../engine/writer-prompt.ts'
 import { createWriterContextReadTool } from './pi-writer-context.ts'
+import { readAgentOutputGuidance } from '../../../../engine/agent-output-guidance'
 
 /** 与 claude-sdk adapter 的 DEFAULT_MAX_TURNS 对齐；命令路径经 RuntimeRunConfig.maxTurns 覆盖（48-72 档）。 */
 const DEFAULT_PI_MAX_TURNS = 12
@@ -253,6 +254,7 @@ async function buildPiRunOptions(
   // 契约时读——沙盒会话（学习/向导/连通性测试，loadNarraCatRuntime:false）零注入，与引擎钩子/记忆
   // 工具同门条件。子会话（buildChildRunOptions）不读，appendix 不透传。
   const agentsGuide = args.loadNarraCatRuntime ? await resolveNovelAgentsGuide(args.projectPath) : null
+  const outputGuidance = args.loadNarraCatRuntime ? await readAgentOutputGuidance(agentCorePath) : null
   return {
     model,
     provider: model.provider,
@@ -266,7 +268,7 @@ async function buildPiRunOptions(
     tools: [...new Set([...face.tools, ...customTools.map((tool) => tool.name)])],
     maxTurns: args.maxTurns ?? DEFAULT_PI_MAX_TURNS,
     systemPrompt: typeof args.systemPrompt === 'string' ? args.systemPrompt : undefined,
-    systemPromptAppendix: [agentsGuide, sourcePolicy].filter(Boolean).join('\n\n') || undefined,
+    systemPromptAppendix: [agentsGuide, sourcePolicy, outputGuidance].filter(Boolean).join('\n\n') || undefined,
     abortController: args.abortController,
     extensions,
     customTools,
