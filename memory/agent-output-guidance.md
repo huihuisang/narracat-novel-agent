@@ -40,12 +40,18 @@ Generation quality still requires output review. Direct-chat samples do not
 establish batch planner quality. Do not treat delivery tests or installation
 checks as prose-quality evidence.
 
-The installed App is now engine 4.0.187. The final 4.0.188 App is signed in
-`dist/mac-arm64/NarraCat.app`, and its planning sources match the checkout.
-Its last guidance edit required a new root signature after packaging. Earlier
-installer archives were moved to `/tmp/narracat-before-final-policy-artifacts`.
-The Mac then locked, and computer use could not unlock it. Final installation
-and UI verification are pending a manual unlock; do not claim 4.0.188 is installed.
+After the author unlocked the Mac, the final signed App with engine 4.0.188
+replaced `/Applications/NarraCat.app`. All 3214 installed entries match the
+package, and the three planning sources match the checkout. The old App was
+removed. The workbench restored chapter 3, showed the agent ready, and retained
+the configured model. The installation backed up 1853 novel and profile entries
+to `~/Library/Application Support/NarraCat-install-backups/20261011-112012-plain-output/`.
+After launch, all 204 novel entries and author settings remained unchanged.
+The report is `/tmp/narracat-plain-output-install.json`.
+The last guidance edit required a new root signature after packaging. Earlier
+installer archives remain in `/tmp/narracat-before-final-policy-artifacts`.
+No generation sample was run on 4.0.188. This was a local signed installation,
+not a notarized or published release.
 
 The source revision `1fc32615` was packaged and installed on 2026-10-11 at
 `/Applications/NarraCat.app` with engine version 4.0.186. Package hashes and
