@@ -42,7 +42,7 @@ Existing dialogue, action, and recap entries were updated; four optional entries
 cover sentence meaning, evidence and counts, time and rules, and a clear question
 for each investigation. The compressor still selects 2-3 relevant entries and
 converts them to chapter-specific guidance. That update used engine 4.0.189;
-the installed App remains 4.0.188. Reading and delivery checks do not establish
+the installed App at that stage was 4.0.188. Reading and delivery checks do not establish
 the quality of a generated chapter.
 
 The author then supplied a longer general revision guide. Its overlapping
@@ -51,8 +51,21 @@ New entries cover cross-chapter plan changes, reasons for waiting or stopping,
 and the full consequences of compound statements. Revision guidance fixes
 continuity and motives before sentence rhythm, and prefers deletion or relocation
 over filler. Failed tests require checking their preconditions before drawing a
-general conclusion. Source version is now 4.0.190; the installed manifest was
-read back as 4.0.188. No App replacement or chapter generation was performed.
+general conclusion. That source update used 4.0.190; the installed manifest was
+then read back as 4.0.188. No chapter generation was performed.
+
+On the author's replacement request, the signed 4.0.190 App was installed and
+launched. All 3214 installed entries match the package. The craft library and
+three planning sources match the checkout. The workbench loaded, the craft
+switch stayed enabled, and the source preview displayed the new revision text.
+The replacement backed up 2085 novel and profile entries to
+`~/Library/Application Support/NarraCat-install-backups/20261011-233208-craft-190/`.
+After launch, 212 novel entries were checked; only SQLite temporary files changed.
+Author settings, including the custom writer persona, remained unchanged.
+The old App was removed. The report is `/tmp/narracat-craft-190-install.json`.
+All 3916 App tests, type and design checks, packaged memory and offline embedding
+smoke, package boundary checks, and signature verification passed. This was a
+local signed installation, not a notarized or published release.
 
 On 2026-10-11, the author reported that output remained difficult to read.
 The selected chapter 3 outline was unchanged: a request to revise it had led
