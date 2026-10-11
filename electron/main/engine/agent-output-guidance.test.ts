@@ -14,8 +14,8 @@ describe('shared agent output guidance', () => {
     for (const agentId of NARRACAT_ENGINE_AGENT_IDS) {
       const parsed = await parseAgentFile(join(process.cwd(), 'agent-core/narracat'), agentId)
       expect(parsed?.prompt).toContain('## 通用输出规范')
-      expect(parsed?.prompt).toContain('大纲写清人物的目标、行动、阻力、选择和结果')
-      expect(parsed?.prompt).toContain('小说正文、人物对白和明确标注的拟写片段')
+      expect(parsed?.prompt).toContain('章节定位写本章发生的变化')
+      expect(parsed?.prompt).toContain('小说正文、人物对白和标明的拟写片段')
     }
   })
 

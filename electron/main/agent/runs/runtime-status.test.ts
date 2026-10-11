@@ -2,6 +2,12 @@ import { describe, expect, test } from 'bun:test'
 import { createDirectChatPrompt, DIRECT_CHAT_SYSTEM_PROMPT } from './runtime-status'
 
 describe('runtime status prompt', () => {
+  test('keeps the selected chapter in revision requests and distinguishes outline revision from generation', () => {
+    const prompt = createDirectChatPrompt({ threadId: 'thread-1', command: 'freeform', prompt: '再改一轮细纲', projectPath: '/tmp/book', selectedChapter: 3 })
+    expect(prompt).toContain('Currently selected chapter: 3')
+    expect(DIRECT_CHAT_SYSTEM_PROMPT).toContain('调整内容')
+    expect(DIRECT_CHAT_SYSTEM_PROMPT).toContain('补充尚未生成的大纲')
+  })
   test('builds a direct chat prompt that does not inspect runtime by default', () => {
     const prompt = createDirectChatPrompt({ threadId: 'thread-1', command: 'freeform', prompt: '你好' })
 

@@ -61,6 +61,7 @@ interface BuildPiRunOptionsExtras {
   allowedRootsOverride?: string[]
   cwdOverride?: string
   sdkToolsOverride?: string[]
+  includeOutputGuidance?: boolean
 }
 
 export interface ComputeBaselineAllowedRootsArgs {
@@ -254,7 +255,7 @@ async function buildPiRunOptions(
   // 契约时读——沙盒会话（学习/向导/连通性测试，loadNarraCatRuntime:false）零注入，与引擎钩子/记忆
   // 工具同门条件。子会话（buildChildRunOptions）不读，appendix 不透传。
   const agentsGuide = args.loadNarraCatRuntime ? await resolveNovelAgentsGuide(args.projectPath) : null
-  const outputGuidance = args.loadNarraCatRuntime ? await readAgentOutputGuidance(agentCorePath) : null
+  const outputGuidance = extras.includeOutputGuidance === false ? null : await readAgentOutputGuidance(agentCorePath)
   return {
     model,
     provider: model.provider,
@@ -293,13 +294,13 @@ export function createPiAdapter(
       return buildPiRunOptions(args, memoryBridge)
     },
     createSandboxedRunOptions(args: RuntimeSandboxRunConfig): Promise<unknown> {
-      // 与 createSandboxedSdkOptions 同纪律：只收窄工具面与目录圈禁两项（学习/向导会话同款），
-      // 其余与 createRunOptions 完全一致；圈禁根只剩 workspaceDir，cwd 也切到 workspaceDir。
+      // 沙盒保留专用系统提示词，工具与目录按沙盒配置收窄。
       const { sandbox, ...rest } = args
       return buildPiRunOptions(rest, memoryBridge, {
         sdkToolsOverride: sandbox.tools,
         allowedRootsOverride: [sandbox.workspaceDir],
         cwdOverride: sandbox.workspaceDir,
+        includeOutputGuidance: false,
       })
     },
     startRun({ prompt, options }): AsyncIterable<unknown> {

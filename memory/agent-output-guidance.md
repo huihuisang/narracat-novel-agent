@@ -19,6 +19,21 @@ rejection of empty agent definitions before shared guidance is appended.
 Prompt-delivery tests establish that models receive the guidance; they do not
 establish a guarantee about future generated prose.
 
+On 2026-10-11, the author reported that output remained difficult to read.
+The selected chapter 3 outline was unchanged: a request to revise it had led
+to the generic planning button and then to new chapter outlines 44-64.
+Normal author chat also omitted shared guidance because delivery depended on
+the novel workflow flag. It now receives guidance without novel tools;
+isolated sandbox prompts remain separate. Direct chat receives the selected
+chapter and directs existing-outline revisions to the Adjust Content action.
+The plan command has a targeted chapter revision branch before missing-chapter
+planning. Submission updates structured JSON; existing Markdown remains
+protected by the existing tool behavior. The App displays structured JSON first.
+Common guidance now uses concrete examples and separates source facts from
+source phrasing. Planning reports state actual change scope and progress.
+Generation quality still requires output review. Do not treat delivery tests,
+installation checks, or a failed live-model attempt as prose-quality evidence.
+
 The source revision `1fc32615` was packaged and installed on 2026-10-11 at
 `/Applications/NarraCat.app` with engine version 4.0.186. Package hashes and
 symlink targets matched all 3214 installed entries. The existing rewrite run

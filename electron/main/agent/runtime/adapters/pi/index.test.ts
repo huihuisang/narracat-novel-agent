@@ -210,6 +210,15 @@ function makeRunConfig(overrides: Record<string, unknown> = {}) {
   }
 }
 
+test('direct author chat receives output guidance without loading novel workflow tools', async () => {
+  const options = await createPiAdapter().createRunOptions(makeRunConfig({
+    appRoot: process.cwd(), loadNarraCatRuntime: false, allowedTools: ['Read'],
+  })) as PiRunOptions
+  expect(options.systemPromptAppendix).toContain('## 通用输出规范')
+  expect(options.customTools.some((tool) => tool.name === 'Task')).toBe(false)
+  expect(options.customTools.some((tool) => tool.name.startsWith(MEMORY_TOOL_PREFIX))).toBe(false)
+})
+
 const fakeMemoryBridge: PiMemoryBridge = {
   loadDefinitions: async () => [
     { name: 'novel_query', description: 'd', inputSchema: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } },
@@ -604,7 +613,7 @@ describe('小说 AGENTS.md 精准注入（loadNarraCatRuntime 门控，F1 回归
     const dir = await mkdtemp(join(tmpdir(), 'narracat-pi-adapter-agents-guide-'))
     await writeFile(join(dir, 'AGENTS.md'), '# 本书写作说明\n只在深夜写反派内心戏。')
     const options = (await createPiAdapter().createSandboxedRunOptions({
-      ...makeRunConfig({ loadNarraCatRuntime: false, projectPath: dir }),
+      ...makeRunConfig({ appRoot: process.cwd(), loadNarraCatRuntime: false, projectPath: dir }),
       sandbox: { tools: ['Read'], workspaceDir: '/tmp/sandbox-ws' },
     } as never)) as PiRunOptions
     expect(options.systemPromptAppendix).toBeUndefined()

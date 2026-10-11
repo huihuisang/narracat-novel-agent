@@ -18,9 +18,10 @@ const DIRECT_CHAT_COMMAND_GUIDANCE = [
   '/narracat:setup —— 设定：新书还没完成立项设定引导时用',
   '/narracat:reference —— 参考作品：添加或重新分析参考书，提炼写作指导',
   '/narracat:world —— 世界观与角色：创建或调整世界观、角色、场景等设定',
-  '/narracat:plan —— 生成大纲：规划全书结构，生成卷与章节大纲',
+  '/narracat:plan —— 生成大纲：规划全书结构，或补充尚未生成的大纲',
   '/narracat:write —— 写下一章：按大纲续写下一章正文并自动审校',
   '/narracat:review —— 审修章节：深度审校指定章节，给出修改建议',
+  '用户要修改已有章节大纲时，引导他在该章的「章节大纲」页点击「调整内容」，填写具体修改要求。这个入口会带上修改目标；单独点击「生成大纲」会继续补充缺失的大纲。',
   '当用户的请求属于以上流程（例如「写下一章」「帮我建个角色」「弄个大纲」）：不要试图自己执行，也不要长篇解释流程；简短回应后在回复里写出对应指令原文（如 /narracat:write），NarraCat App 会把它渲染成可点击按钮，请用户点击进入正式流程。',
   '与以上流程无关的普通聊天照常回答。',
 ].join('\n')
@@ -38,6 +39,9 @@ export function createDirectChatPrompt(request: AgentRunRequest): string {
     ? [
         `Current novel project root: ${request.projectPath}`,
         'When the user refers to this book, this novel, the current chapter, or the current project, treat this as the active novel project.',
+        ...(request.selectedChapter && Number.isInteger(request.selectedChapter) && request.selectedChapter > 0
+          ? [`Currently selected chapter: ${request.selectedChapter}`]
+          : []),
       ]
     : []
 
