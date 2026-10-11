@@ -41,9 +41,18 @@ At the author's request, these findings now inform `novel-web-craft/SKILL.md`.
 Existing dialogue, action, and recap entries were updated; four optional entries
 cover sentence meaning, evidence and counts, time and rules, and a clear question
 for each investigation. The compressor still selects 2-3 relevant entries and
-converts them to chapter-specific guidance. Source engine version is 4.0.189;
+converts them to chapter-specific guidance. That update used engine 4.0.189;
 the installed App remains 4.0.188. Reading and delivery checks do not establish
 the quality of a generated chapter.
+
+The author then supplied a longer general revision guide. Its overlapping
+principles were merged into existing entries rather than copied as a checklist.
+New entries cover cross-chapter plan changes, reasons for waiting or stopping,
+and the full consequences of compound statements. Revision guidance fixes
+continuity and motives before sentence rhythm, and prefers deletion or relocation
+over filler. Failed tests require checking their preconditions before drawing a
+general conclusion. Source version is now 4.0.190; the installed manifest was
+read back as 4.0.188. No App replacement or chapter generation was performed.
 
 On 2026-10-11, the author reported that output remained difficult to read.
 The selected chapter 3 outline was unchanged: a request to revise it had led
