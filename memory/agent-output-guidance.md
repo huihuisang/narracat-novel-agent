@@ -18,3 +18,10 @@ main and dispatched sessions, duplicate prevention, fresh source edits, and
 rejection of empty agent definitions before shared guidance is appended.
 Prompt-delivery tests establish that models receive the guidance; they do not
 establish a guarantee about future generated prose.
+
+The source revision `1fc32615` was packaged and installed on 2026-10-11 at
+`/Applications/NarraCat.app` with engine version 4.0.186. Package hashes and
+symlink targets matched all 3214 installed entries. The existing rewrite run
+was waiting for outline confirmation and was interrupted through normal app
+exit. The restarted workbench showed the agent ready. Novel files and author
+settings remained unchanged; existing outlines were not rewritten.
