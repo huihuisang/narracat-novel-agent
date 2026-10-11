@@ -19,6 +19,15 @@ rejection of empty agent definitions before shared guidance is appended.
 Prompt-delivery tests establish that models receive the guidance; they do not
 establish a guarantee about future generated prose.
 
+For author-requested outline polishing, edit only the named outline files and
+preserve their schema, identifiers, plot order, and qualified decisions. Keep a
+backup and compare unchanged metadata after editing. Explain fear through the
+specific danger and resulting choice. Keep speaker attribution and experiment
+recipients clear. A failed search does not prove that no other witness exists;
+a missing payment record does not prove that money has no source. The author
+requested this treatment for chapter outlines 1-3 on 2026-10-11. Their prose
+fields were revised directly, without changing the manuscript or App resources.
+
 On 2026-10-11, the author reported that output remained difficult to read.
 The selected chapter 3 outline was unchanged: a request to revise it had led
 to the generic planning button and then to new chapter outlines 44-64.
