@@ -31,8 +31,14 @@ planning. Submission updates structured JSON; existing Markdown remains
 protected by the existing tool behavior. The App displays structured JSON first.
 Common guidance now uses concrete examples and separates source facts from
 source phrasing. Planning reports state actual change scope and progress.
-Generation quality still requires output review. Do not treat delivery tests,
-installation checks, or a failed live-model attempt as prose-quality evidence.
+An installed 4.0.187 direct-chat sample used the configured GLM model. Its report
+was plain, but its outline added unsupported motives and turned a qualified
+decision into an absolute rule. Version 4.0.188 removes the instruction to fill
+each beat with obstacles and choices. Existing-content revisions preserve
+source facts and qualifiers. New plot design remains allowed within its scope.
+Generation quality still requires output review. Direct-chat samples do not
+establish batch planner quality. Do not treat delivery tests or installation
+checks as prose-quality evidence.
 
 The source revision `1fc32615` was packaged and installed on 2026-10-11 at
 `/Applications/NarraCat.app` with engine version 4.0.186. Package hashes and

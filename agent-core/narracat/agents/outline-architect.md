@@ -85,7 +85,7 @@ skills:
 2. 把每个 arc 的 core_question 拆成各章的推进步：蓄压 → 对抗 → 释放；arc 末章给出 yes/no 结算并触发 next_arc_seed；把 arc 的 payoff_beats（主节拍）落到具体章，小爽另按反馈回路的粒度铺进沿途各章。区间跨多个 arc 时逐 arc 顺次铺排。
 3. 每章产出 `{chapter, title, positioning, beats[], must_deliver[]?, payoff_beat?, payoff_intensity?, end_hook, storyline_focus[], characters[], pov_character, foreshadowing_touch[]?, state_changes[]?}`：
    - `positioning`：本章定位，说明本章结束后，人物知道了什么、作出了什么决定，或关系和处境发生了什么变化。写到本章实际发生的结果。
-   - `beats`：有序场景骨架，每条从具体人物的行动写起，按发生顺序交代阻力、选择和结果。至少 3 条，条数随本章戏量灵活。保留支撑情节的动作、道具与关键台词；语气、比喻、生理反应和感官描写的具体写法由写手决定。人物的猜测注明是谁的猜测，确认的事实给出对应证据。随手带出的具体元素（道具、生物、次要角色）一旦制造了威胁或期待，要当场交代或登记进伏笔延后兑现，见 foreshadow-distance 包。
+   - `beats`：有序场景骨架，按发生顺序写具体人物做了什么、发生了什么变化。有实际困难或选择时，交代它如何影响后续行动。至少 3 条，条数随本章戏量灵活。保留支撑情节的动作、道具与关键台词；语气、比喻、生理反应和感官描写的具体写法由写手决定。人物的猜测注明是谁的猜测，确认的事实给出对应证据。随手带出的具体元素（道具、生物、次要角色）一旦制造了威胁或期待，要当场交代或登记进伏笔延后兑现，见 foreshadow-distance 包。
    - `must_deliver`：可空。本章绕不过的硬交付项：非落地不可的爽点或伏笔，写成显式条目（如「某线索靠物证呈现、不靠旁白」），让写手知道这章的硬指标。
    - `payoff_beat`：可空。本章兑现的爽点类型（face_slap / level_up / windfall / fame / reveal / reunion / counterattack / sweet）。medium / large 的主节拍从 arc 的 payoff_beats 里落到具体章；small 的小爽不受 arc 列表限制，按本书反馈回路与实际进展安排。本章没有实际兑现时留空，不为填字段另造奖励。
    - `payoff_intensity`：可空，填了 `payoff_beat` 就同步标一个强度（small / medium / large）——这一下是日常小确幸、阶段性翻身，还是全书级大爆点，强度谱与间隔纪律见 payoff-cadence 包。没爽点的章两个字段都留空。
