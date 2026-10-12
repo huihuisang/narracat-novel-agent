@@ -15,6 +15,15 @@ ADR-0048 records this contract. The new checks went red before implementation;
 3920 App tests and 957 MCP tests pass. Installed generation verification is still
 pending at this source checkpoint. Tests do not establish prose quality.
 
+The signed 4.0.191 App is now installed. All 3214 installed entries match the
+package, and four writer/reviewer source files match the checkout. Package memory
+and offline embedding checks passed. A read-only call to the installed contract
+handler returned `ok: false`, 1623 measured words, and a 1760-word minimum for
+the existing formal chapter 4 manuscript. It did not change the file. The backup
+is under `NarraCat-install-backups/20261012-111930-validation-191/`. Desktop text
+input did not take effect, so the new rewrite has not started; the author was
+asked to foreground the input. Do not present installation as generation success.
+
 The author rejected the resulting chapter 4 prose as difficult to read. A
 comparison with its local-revision brief found that the phrase about rumors
 being close to the mother was already in the brief and was copied into the
