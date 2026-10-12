@@ -88,6 +88,7 @@ allowed-tools: [Agent, TaskCreate, TaskUpdate, Read, Write, Edit, Glob, AskUserQ
 3. 按下面的五段结构，把包与素材翻译成一份自然语言任务书，Write 到 `.narracat/staging/ch-{三位章号}.brief.md`（三位补零，完整文件名形如 `ch-004.brief.md`——章号段与正文一致，后缀不同，别写成正文的 `ch-004.md`）。要求：
    - 任务书是写手唯一的剧情输入，细纲信息如实全量承载——翻译成人话，不减料、不降级。
    - 不减料指事件、因果与信息点。细纲里预写的演法（比喻、生理反应、感官描写的具体写法）不搬运——把它还原成事件和这一拍要打出的效果，怎么演由写手定。两分判据：删掉后这场戏仍成立的是演法；删掉戏就断的（承载功能的动作、道具、关键台词）是必须落地的细节，原样保留。
+   - 任务书本身也要读得清楚：只交代事实、人物目标、顾虑与场景重点，不预写带比喻的旁白让写手照抄。作者给出的反例只用于说明应修的问题，不作为语感样句。必须出现的资料说明其来源和作用，允许分散在行动、叙述与对白中，不要求一个人一句话报齐。重要选择需要展开时说明读者应理解什么，不把心理限定成几句结论。
    - 任务书里不得出现字段名、工具名、pack 名、伏笔编号、英文确定度枚举等系统词——写手读到的必须是纯人话（机械检查会拦下命中项：被打回就按提示改写后重新 Write 一次；第二次仍命中会放行，把警示留到完成输出）。
    - `warnings` 里影响本章的项翻译成自然语言提醒写进对应段落，其余丢弃。
    - 从素材库选出**与本章有关的 2-3 条**建议，放进第四段；作者明确提出的要求另按下一条完整承载，不受此数量限制。结合本书声音落实到具体场景：哪段值得展开，哪段可以概述，人物担心什么、因此会怎样做，或一场对话里双方各想得到什么。没有对白的章不用另造对白，有效的静场不必为提速删掉。
@@ -177,6 +178,8 @@ Task(chapter-writer, thinking="off"): "对第 {chapter_num} 章成稿做一遍�
 
 冷 pass 完成后重调一次 `novel_check_prose_hygiene(chapter=chapter_num)` 复扫留档：指标劣化或仍超硬线 → 记下 message 留到完成输出，**不再追加改稿轮**（步骤 5 的审校修复是唯一例外）。然后 novel_checkpoint(step=3)。
 
+冷改后重新执行 3c 的正文合同检查，使用工具返回的 `word_count` 与 `word_count_range`，不用写手估算。字数不足时按合同修复上限处理；补足既定场景中的对话、判断与选择，不新增事件或重复说明。机械扫描只检查句式和排版特征，即使命中为空，也不能报告“无AI味”或“表达全部合格”。
+
 ## 步骤 4：审校
 
 派发：
@@ -187,24 +190,24 @@ Task(continuity-editor): "审校第 {chapter_num} 章。
 WritingContextPack 路径: {pack_path}"
 ```
 
-审校 agent 完成后，主会话调 `mcp__narracat_memory__novel_get_review(chapter=chapter_num)` 取 `{verdict, blockers}`，然后 novel_checkpoint(step=4)。审校报告文件由工具渲染，主会话不读、不解析报告文本。
+审校 agent 完成后，主会话调 `mcp__narracat_memory__novel_get_review(chapter=chapter_num)` 取 `{verdict, blockers, readability_notes}`，然后 novel_checkpoint(step=4)。审校报告文件由工具渲染，主会话不读、不解析报告文本。
 
 ## 步骤 5：审校路由
 
-- verdict == "pass" → novel_checkpoint(step=5)，进入步骤 6。
-- verdict == "fail"（首次）→ 定向修复一次（任务书文件不存在时——升级前的旧中断——派发中省略「任务书路径」一行）：
+- verdict == "pass" 且 `readability_notes` 为空 → novel_checkpoint(step=5)，进入步骤 6。
+- verdict == "fail" 或有 `readability_notes`（首次）→ 把 blockers 与 readability_notes 合并为本轮问题清单，定向修复一次（任务书文件不存在时——升级前的旧中断——派发中省略「任务书路径」一行）：
 
 ```
 Task(chapter-writer): "修复第 {chapter_num} 章的下列问题。只修改问题涉及的段落，保留其余正文，不整章重写。
 正文路径: {manuscript_path}
 任务书路径: {brief 路径}
 问题清单（逐条处理）:
-{blockers 原样逐条列出}"
+{blockers 与 readability_notes 原样逐条列出}"
 ```
 
-  修复完成后重新执行步骤 4，复审派发末尾追加一句：「只复验下列已修复问题: {blockers 原样逐条列出}」。
+  修复完成后先执行 3c 的合同检查；补写或清理全部结束后再执行步骤 4，复审派发末尾追加一句：「只复验下列已修复问题: {本轮问题清单}」。这样最终审校指纹绑定最后修改的稿件。
 
-- 复审后 verdict == "pass" → 修复动作已改过正文，进入步骤 6 前重新调一次 `mcp__narracat_memory__novel_check_manuscript_contract(chapter=chapter_num)`：`ok == true` → novel_checkpoint(step=5)，进入步骤 6；`ok == false` → 按 3c 的补写流程处理（复检上限 2 轮；仍不过 → novel_checkpoint(step=3)，输出 errors 并报告「第 {chapter_num} 章正文未达交付合同，请人工处理后重新执行 /narracat:write {chapter_num}」，终止）。
+- 复审后 verdict == "pass" → novel_checkpoint(step=5)，进入步骤 6。若仍有 readability_notes，在完成报告中引用原句说明遗留建议，不追加修改轮、不称表达全部通过。
 - 复审后 verdict 仍 == "fail"（修复轮上限 1，已用完）→ 调 novel_checkpoint(step=3)（把断点退回「正文已生成」，下次恢复将从步骤 4 重新审校），输出 blockers 清单并报告：「第 {chapter_num} 章经一轮定向修复仍未通过审校，请人工处理后重新执行 /narracat:write {chapter_num}」，终止。
 
 ## 步骤 6：入库收尾

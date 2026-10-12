@@ -70,29 +70,29 @@ describe('createPiEngineHooksExtension', () => {
     expect(result!.content).toHaveLength(2)
     expect((result!.content![0] as TextContent).text).toBe('ok')
     expect((result!.content![1] as TextContent).text).toContain('低于目标区间下限')
-    expect((result!.content![1] as TextContent).text).toContain('1800')
+    expect((result!.content![1] as TextContent).text).toContain('2400')
   })
 
-  test('config.yaml 存在时按 words_per_chapter 换算区间（3000 → 2100/4500）', async () => {
+  test('config.yaml 存在时按 words_per_chapter 换算区间（4000 → 3200/4800）', async () => {
     const cwd = makeCwd()
     mkdirSync(join(cwd, 'manuscript'), { recursive: true })
-    writeConfig(cwd, 'words_per_chapter: 3000\n')
+    writeConfig(cwd, 'words_per_chapter: 4000\n')
     const ext = createPiEngineHooksExtension({ cwd })
-    // 2000 字：≥ 默认下限 1800（若未读到 config 会被判"通过"），< 换算下限 2100（读到 config 才会命中）。
-    const content = '字'.repeat(2000)
+    // The default range accepts 3000 words; the configured range rejects it.
+    const content = '字'.repeat(3000)
     const result = await fireToolResult(
       ext,
       baseEvent({ input: { path: join(cwd, 'manuscript', 'ch-001.md'), content } }),
     )
     expect(result).toBeDefined()
-    expect((result!.content![1] as TextContent).text).toContain('2100')
+    expect((result!.content![1] as TextContent).text).toContain('3200')
   })
 
   test('config.yaml 缺失 → 缺省区间不抛', async () => {
     const cwd = makeCwd()
     mkdirSync(join(cwd, 'manuscript'), { recursive: true })
     const ext = createPiEngineHooksExtension({ cwd })
-    const content = '字'.repeat(2000)
+    const content = '字'.repeat(3000)
     const result = await fireToolResult(
       ext,
       baseEvent({ input: { path: join(cwd, 'manuscript', 'ch-001.md'), content } }),
@@ -105,7 +105,7 @@ describe('createPiEngineHooksExtension', () => {
     mkdirSync(join(cwd, 'manuscript'), { recursive: true })
     writeConfig(cwd, '::: not valid yaml :::\n  bad indent\nfoo')
     const ext = createPiEngineHooksExtension({ cwd })
-    const content = '字'.repeat(2000)
+    const content = '字'.repeat(3000)
     const result = await fireToolResult(
       ext,
       baseEvent({ input: { path: join(cwd, 'manuscript', 'ch-001.md'), content } }),
@@ -180,6 +180,6 @@ describe('createPiEngineHooksExtension', () => {
       baseEvent({ input: { path: join(cwd, 'manuscript', 'ch-001.md'), content } }),
     )
     expect(result).toBeDefined()
-    expect((result!.content![1] as TextContent).text).toContain('1800')
+    expect((result!.content![1] as TextContent).text).toContain('2400')
   })
 })

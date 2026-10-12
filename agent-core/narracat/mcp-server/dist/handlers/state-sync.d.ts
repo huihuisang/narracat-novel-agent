@@ -65,13 +65,16 @@ export interface WorkingManuscript {
  */
 export declare function resolveWorkingManuscript(projectRoot: string, chapter: number): Promise<WorkingManuscript | null>;
 /**
- * 正文机械合同：仅当该章存在 staging 时生效（写作链产出必须过合同；
- * 无 staging = 作者手改 / 存量老书链路，一律免检返回 null）。
+ * Check staged drafts and formal drafts in an active write or rewrite.
+ * Explicit preflight also checks formal manuscripts outside an active workflow.
+ * Author memory sync keeps its existing behavior outside generation checkpoints.
  * 硬项进 errors（拒绝提交），软项进 warnings（只提醒）。
  */
-export declare function checkManuscriptContract(ctx: ToolContext, chapter: number): Promise<{
+export declare function checkManuscriptContract(ctx: ToolContext, chapter: number, includeFormal?: boolean): Promise<{
     errors: ToolErrorItem[];
     warnings: string[];
+    word_count: number;
+    source: WorkingManuscript["source"];
 } | null>;
 /**
  * ASCII 引号机械归一：仅处理「同一行内成对出现、且该行含汉字」的 ASCII 双引号，
@@ -89,7 +92,8 @@ export declare function normalizeCornerQuotesWhenSoleForm(text: string): string;
  * novel_check_manuscript_contract：/write 写手完成后立即预检本章 staging 正文。
  * 先做引号机械归一（ASCII 成对交替 + 整篇独用直角引号时按弯引号统一；
  * 有变化才写回；此时正文尚未进审校，指纹链不受影响），
- * 再跑机械合同。无 staging 一律放行（作者手改 / 存量老书链路不受门）。
+ * Then check the working manuscript, including a formal-path rewrite.
+ * A missing manuscript is an error, not a successful skipped check.
  * 归一只在本 handler 做——writers 记忆入口与 update_progress 共用的
  * checkManuscriptContract 保持纯读，账房门不写文件。
  */

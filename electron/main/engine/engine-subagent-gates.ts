@@ -94,6 +94,8 @@ async function findFileRecursive(dir: string, filename: string): Promise<string 
 
 async function findManuscriptPath(cwd: string, state: UnknownRecord, chapter: number): Promise<string | undefined> {
   const nnn = String(chapter).padStart(3, '0')
+  const staging = join(cwd, '.narracat', 'staging', `ch-${nnn}.md`)
+  if (await readOptionalText(staging) !== undefined) return staging
   const vol = readChapterVolume(state, chapter)
   if (vol !== undefined) {
     const volStr = String(vol).padStart(2, '0')

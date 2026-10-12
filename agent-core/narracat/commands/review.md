@@ -1,12 +1,12 @@
 ---
-description: 审校已完成章节 — 默认客观错误审校；追加 deep 进入深度标注
+description: 审校已完成章节 — 核对连续性并记录具体表达问题；追加 deep 进入深度标注
 argument-hint: <章节号或范围，如"42"、"40-45"、"vol-01"；追加 deep 进入深审>
 allowed-tools: [Agent, Read, Write, AskUserQuestion, "mcp__narracat_memory__novel_build_writing_context_pack", "mcp__narracat_memory__novel_get_review"]
 ---
 
 对已完成章节做审校。两种模式：
 
-- **模式 A（默认）**：客观错误审校。与 /narracat:write 的写后审修是同一个 agent、同一套规则，本命令不另加任何审校要求。
+- **模式 A（默认）**：核对客观错误，并记录句意、对白和场景表达方面的具体建议。与 /narracat:write 的写后审修是同一个 agent、同一套规则，本命令不另加任何审校要求。
 - **模式 B（深审）**：$ARGUMENTS 含 `deep` 时触发。纯描述性标注，供人阅读，不评分、不判定、不回流修改。
 
 ## 参数解析
@@ -31,7 +31,7 @@ allowed-tools: [Agent, Read, Write, AskUserQuestion, "mcp__narracat_memory__nove
    上下文包路径: {pack_path}"
    ```
 
-3. 调 `novel_get_review(chapter={N})` 取 `{verdict, blockers[]}`。审校报告由工具渲染到 `reviews/ch-{NNN}-review.md`，主会话不写报告文件。
+3. 调 `novel_get_review(chapter={N})` 取 `{verdict, blockers[], readability_notes[]}`。审校报告由工具渲染到 `reviews/ch-{NNN}-review.json`，主会话不写报告文件。
 
 全部章节完成后汇总展示：
 
@@ -40,6 +40,7 @@ allowed-tools: [Agent, Read, Write, AskUserQuestion, "mcp__narracat_memory__nove
 
 - verdict=fail 的章：逐条列出 blockers，建议 `/narracat:rewrite {N}` 修复。
 - 全部 pass：报告"审校通过，未发现本轮检查范围内的客观错误"。
+- 有 readability_notes 时另列原句与建议，不把 PASS 解释为文笔或阅读质量全部通过。本命令仍只诊断，不自动改稿。
 
 ## 模式 B：深审标注（按需）
 

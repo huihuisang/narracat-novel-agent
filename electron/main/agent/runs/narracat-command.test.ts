@@ -11,6 +11,21 @@ describe('NarraCat command run resolver', () => {
   const readCommandFile = (_pluginPath: string, commandName: string) =>
     `---\ndescription: ${commandName}\n---\n执行 ${commandName} 流程，读取 $ARGUMENTS 和 \${CLAUDE_PLUGIN_ROOT}/templates。`
 
+  test('delivers the rewrite brief, staging path, and readability repair route without a formal-path generation instruction', async () => {
+    const source = await readFile(join(process.cwd(), 'agent-core/narracat/commands/rewrite.md'), 'utf-8')
+    const resolved = resolveNarraCatCommandRun(
+      { threadId: 'thread-1', command: 'rewrite', prompt: '4', projectPath: '/novels/stars' },
+      { pluginPath: '/agent-core/narracat', readCommandFile: () => source },
+    )
+
+    expect(resolved.prompt).toContain('.narracat/staging/ch-{NNN}.md')
+    expect(resolved.prompt).toContain('步骤 3a')
+    expect(resolved.prompt).toContain('3d 单次冷改')
+    expect(resolved.prompt).toContain('novel_check_manuscript_contract')
+    expect(resolved.prompt).toContain('readability_notes')
+    expect(resolved.prompt).not.toContain('生成新章节正文时优先写入 canonical 路径')
+  })
+
   test('resolves setup as an Agent-guided NarraCat command', () => {
     const resolved = resolveNarraCatCommandRun(
       {

@@ -52,6 +52,8 @@
 
 ## Status Vocabulary
 
+正文验收与表达审校见 [ADR-0048](0048-generated-manuscript-validation-and-readability.md)：正式稿检查、有限轮次的表达修订，以及PASS的适用范围。
+
 - `Accepted`: decision is current unless the "Current reading / relation" column narrows it.
 - `Accepted, partially superseded`: core decision remains, but part of the original wording is historical or replaced by a later ADR.
 - `Accepted, migration completed`: migration rationale remains useful history, while the target state is now the current norm.

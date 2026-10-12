@@ -677,6 +677,7 @@ export async function novelGetReview(args, ctx) {
         verdict: row.verdict,
         blockers: issues.filter((i) => i.severity === "blocker"),
         notes: issues.filter((i) => i.severity === "note"),
+        readability_notes: issues.filter((i) => i.severity === "note" && i.category === "readability"),
         created_at: row.created_at,
     };
 }

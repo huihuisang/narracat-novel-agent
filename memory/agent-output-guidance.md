@@ -1,5 +1,20 @@
 # Shared agent output guidance
 
+Engine 4.0.191 fixes the formal-path contract bypass for active write and rewrite
+checkpoints. Explicit preflight checks both paths and returns the measured count;
+missing files fail. Author sync outside generation remains unaffected. App write
+hints now share the contract's text count and 80%-120% range and recognize staging.
+Subagent output checks prefer staging over an older formal file. The runtime
+path guard now directs generation to staging instead of early formal overwrite.
+
+Rewrite builds a fresh brief and reuses write's one cold revision before review.
+Review issues can retain an optional readability category, and the retrieval
+tool returns these notes for one targeted revision. Objective blockers and
+subjective recommendations keep separate effects; final review follows all edits.
+ADR-0048 records this contract. The new checks went red before implementation;
+3920 App tests and 957 MCP tests pass. Installed generation verification is still
+pending at this source checkpoint. Tests do not establish prose quality.
+
 The author rejected the resulting chapter 4 prose as difficult to read. A
 comparison with its local-revision brief found that the phrase about rumors
 being close to the mother was already in the brief and was copied into the

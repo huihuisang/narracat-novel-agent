@@ -98,6 +98,11 @@ const REVIEW_SEVERITY_LABELS: Record<string, string> = {
   note: '存疑',
 }
 
+const REVIEW_CATEGORY_LABELS: Record<string, string> = {
+  continuity: '连续性',
+  readability: '阅读表达',
+}
+
 // ── PremiseCards 枚举（schemas/premise-cards.json，ADR-0019） ─────────────────
 
 /** premise_card.card —— 八张实体立项卡的卡名（第 9「留白声明」由各条确定度自动汇总，不入枚举） */
@@ -313,6 +318,12 @@ export const SCHEMA_ENUM_LABEL_BINDINGS = [
     schemaFile: 'review-report.json',
     enumPath: ['properties', 'issues', 'items', 'properties', 'severity', 'enum'],
     labels: REVIEW_SEVERITY_LABELS,
+  },
+  {
+    field: 'issue.category',
+    schemaFile: 'review-report.json',
+    enumPath: ['properties', 'issues', 'items', 'properties', 'category', 'enum'],
+    labels: REVIEW_CATEGORY_LABELS,
   },
   {
     field: 'premise_card.card',

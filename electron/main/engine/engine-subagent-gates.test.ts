@@ -62,6 +62,13 @@ async function makeProject({
 }
 
 describe('runSubagentGate', () => {
+  test('checks the staged draft instead of an older formal manuscript', async () => {
+    const root = await makeProject({ chapter: 4, volume: 1, wordsPerChapter: 2200, manuscriptBody: '字'.repeat(2200) })
+    await mkdir(join(root, '.narracat/staging'), { recursive: true })
+    await writeFile(join(root, '.narracat/staging/ch-004.md'), '字'.repeat(1623) + '。')
+    const messages = await runSubagentGate('chapter-writer', root)
+    expect(messages.some((message) => message.includes('1623') && message.includes('staging'))).toBe(true)
+  })
   test('agentId 非 chapter-writer/memory-keeper → []（IO 全跳过）', async () => {
     const result = await runSubagentGate('outline-architect', '/nonexistent-project-dir')
     expect(result).toEqual([])
@@ -141,10 +148,10 @@ describe('runSubagentGate', () => {
     expect(result.some((m) => m.includes('中文双引号不成对'))).toBe(true)
   })
 
-  test('chapter-writer：config.yaml 缺失 → 缺省区间 1800-4000', async () => {
+  test('chapter-writer：config.yaml 缺失 → 缺省区间 2400-3600', async () => {
     const root = await makeProject({ chapter: 1, volume: 1, manuscriptBody: '字'.repeat(100) })
     const result = await runSubagentGate('chapter-writer', root)
-    expect(result.some((m) => m.includes('低于目标区间下限 1800'))).toBe(true)
+    expect(result.some((m) => m.includes('低于目标区间下限 2400'))).toBe(true)
   })
 
   test('memory-keeper：回执缺失 → 提示', async () => {

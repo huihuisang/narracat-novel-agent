@@ -11,6 +11,11 @@ import {
 // 及其 .test.mjs 已随 claude-sdk 退役删除，其用例语义已并入本文件。
 
 describe('checkChapterWordcount', () => {
+  test('counts staged prose without punctuation using the contract range', () => {
+    const result = checkChapterWordcount({ filePath: '.narracat/staging/ch-004.md', content: '字'.repeat(1623) + '，。'.repeat(200), wordsPerChapter: 2200 })
+    expect(result).toContain('章节字数 1623 低于目标区间下限 1760')
+  })
+
   test('非章节路径 → undefined（bible/premise.md）', () => {
     expect(
       checkChapterWordcount({ filePath: 'bible/premise.md', content: 'x'.repeat(5000) })
@@ -28,7 +33,7 @@ describe('checkChapterWordcount', () => {
 
   test('manuscript/ch-1.md 命中路径正则', () => {
     const result = checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(1799) })
-    expect(result).toContain('低于目标区间下限 1800')
+    expect(result).toContain('低于目标区间下限 2400')
   })
 
   test('manuscript/vol-01/ch-001.md 命中路径正则', () => {
@@ -36,17 +41,17 @@ describe('checkChapterWordcount', () => {
       filePath: 'manuscript/vol-01/ch-001.md',
       content: '字'.repeat(1799),
     })
-    expect(result).toContain('低于目标区间下限 1800')
+    expect(result).toContain('低于目标区间下限 2400')
   })
 
-  test('1799 个非空白字符 → 含低于目标区间下限 1800', () => {
-    const result = checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(1799) })
-    expect(result).toBe('章节字数 1799 低于目标区间下限 1800（manuscript/ch-1.md）。可能需要补写。')
+  test('2399 个正文字符低于默认下限 2400', () => {
+    const result = checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(2399) })
+    expect(result).toBe('章节字数 2399 低于目标区间下限 2400（manuscript/ch-1.md）。可能需要补写。')
   })
 
-  test('4001 个非空白字符 → 含高于目标区间上限 4000', () => {
-    const result = checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(4001) })
-    expect(result).toBe('章节字数 4001 高于目标区间上限 4000（manuscript/ch-1.md）。可能需要精简。')
+  test('3601 个正文字符高于默认上限 3600', () => {
+    const result = checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(3601) })
+    expect(result).toBe('章节字数 3601 高于目标区间上限 3600（manuscript/ch-1.md）。可能需要精简。')
   })
 
   test('区间内 → undefined', () => {
@@ -55,38 +60,38 @@ describe('checkChapterWordcount', () => {
     ).toBeUndefined()
   })
 
-  test('1800（下限本身）→ undefined', () => {
+  test('2400（下限本身）→ undefined', () => {
     expect(
-      checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(1800) })
+      checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(2400) })
     ).toBeUndefined()
   })
 
-  test('4000（上限本身）→ undefined', () => {
+  test('3600（上限本身）→ undefined', () => {
     expect(
-      checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(4000) })
+      checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content: '字'.repeat(3600) })
     ).toBeUndefined()
   })
 
-  test('wordsPerChapter: 3000 → 下限 2100', () => {
+  test('wordsPerChapter: 3000 → 下限 2400', () => {
     const result = checkChapterWordcount({
       filePath: 'manuscript/ch-1.md',
-      content: '字'.repeat(2099),
+      content: '字'.repeat(2399),
       wordsPerChapter: 3000,
     })
-    expect(result).toBe('章节字数 2099 低于目标区间下限 2100（manuscript/ch-1.md）。可能需要补写。')
+    expect(result).toBe('章节字数 2399 低于目标区间下限 2400（manuscript/ch-1.md）。可能需要补写。')
   })
 
-  test('wordsPerChapter: 3000 → 上限 4500', () => {
+  test('wordsPerChapter: 3000 → 上限 3600', () => {
     const result = checkChapterWordcount({
       filePath: 'manuscript/ch-1.md',
-      content: '字'.repeat(4501),
+      content: '字'.repeat(3601),
       wordsPerChapter: 3000,
     })
-    expect(result).toBe('章节字数 4501 高于目标区间上限 4500（manuscript/ch-1.md）。可能需要精简。')
+    expect(result).toBe('章节字数 3601 高于目标区间上限 3600（manuscript/ch-1.md）。可能需要精简。')
   })
 
   test('空白不计数：全角空格 U+3000 与换行不算字数', () => {
-    const content = '字'.repeat(1800) + '　　'.repeat(500) + '\n\n\n'
+    const content = '字'.repeat(2400) + '　　'.repeat(500) + '\n\n\n'
     expect(checkChapterWordcount({ filePath: 'manuscript/ch-1.md', content })).toBeUndefined()
   })
 })
@@ -298,40 +303,40 @@ describe('judgeChapterWriterOutput', () => {
     expect(result).toEqual(['第 3 章正文文件为空（manuscript/vol-01/ch-003.md）。需要重新生成本章正文。'])
   })
 
-  test('字数低于 wordsPerChapter*7/10 → 低于下限提示', () => {
+  test('字数低于 wordsPerChapter*0.8 → 低于下限提示', () => {
     const result = judgeChapterWriterOutput({
       chapter: 1,
       manuscriptPath: 'manuscript/vol-01/ch-001.md',
       manuscriptText: '字'.repeat(2099),
       wordsPerChapter: 3000,
     })
-    expect(result).toContain('第 1 章字数 2099 低于目标区间下限 2100（manuscript/vol-01/ch-001.md）。需要补写到目标区间。')
+    expect(result).toContain('第 1 章字数 2099 低于目标区间下限 2400（manuscript/vol-01/ch-001.md）。需要补写到目标区间。')
   })
 
-  test('字数高于 wordsPerChapter*3/2 → 精简提示', () => {
+  test('字数高于 wordsPerChapter*1.2 → 精简提示', () => {
     const result = judgeChapterWriterOutput({
       chapter: 1,
       manuscriptPath: 'manuscript/vol-01/ch-001.md',
       manuscriptText: '字'.repeat(4501),
       wordsPerChapter: 3000,
     })
-    expect(result).toContain('第 1 章字数 4501 高于目标区间上限 4500（manuscript/vol-01/ch-001.md）。可适当精简。')
+    expect(result).toContain('第 1 章字数 4501 高于目标区间上限 3600（manuscript/vol-01/ch-001.md）。可适当精简。')
   })
 
-  test('缺省 wordsPerChapter 时区间为 1800-4000', () => {
+  test('缺省 wordsPerChapter 时区间为 2400-3600', () => {
     const low = judgeChapterWriterOutput({
       chapter: 1,
       manuscriptPath: 'manuscript/vol-01/ch-001.md',
       manuscriptText: '字'.repeat(1799),
     })
-    expect(low).toContain('第 1 章字数 1799 低于目标区间下限 1800（manuscript/vol-01/ch-001.md）。需要补写到目标区间。')
+    expect(low).toContain('第 1 章字数 1799 低于目标区间下限 2400（manuscript/vol-01/ch-001.md）。需要补写到目标区间。')
 
     const high = judgeChapterWriterOutput({
       chapter: 1,
       manuscriptPath: 'manuscript/vol-01/ch-001.md',
       manuscriptText: '字'.repeat(4001),
     })
-    expect(high).toContain('第 1 章字数 4001 高于目标区间上限 4000（manuscript/vol-01/ch-001.md）。可适当精简。')
+    expect(high).toContain('第 1 章字数 4001 高于目标区间上限 3600（manuscript/vol-01/ch-001.md）。可适当精简。')
   })
 
   test('中文双引号左右不成对 → 提示（左 N / 右 M）', () => {

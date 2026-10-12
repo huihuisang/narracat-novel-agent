@@ -183,20 +183,25 @@ const CONTRACT_TERMINAL_RE = /[。！？…”』」》—]$/;
 const CONTRACT_ASCII_QUOTE_CN_RE = /"[^"\n]*[一-鿿][^"\n]*"/;
 
 /**
- * 正文机械合同：仅当该章存在 staging 时生效（写作链产出必须过合同；
- * 无 staging = 作者手改 / 存量老书链路，一律免检返回 null）。
+ * Check staged drafts and formal drafts in an active write or rewrite.
+ * Explicit preflight also checks formal manuscripts outside an active workflow.
+ * Author memory sync keeps its existing behavior outside generation checkpoints.
  * 硬项进 errors（拒绝提交），软项进 warnings（只提醒）。
  */
 export async function checkManuscriptContract(
   ctx: ToolContext,
   chapter: number,
-): Promise<{ errors: ToolErrorItem[]; warnings: string[] } | null> {
-  let raw: string;
-  try {
-    raw = await readFile(stagingManuscriptPath(ctx.projectRoot, chapter), "utf-8");
-  } catch {
-    return null;
+  includeFormal = false,
+): Promise<{ errors: ToolErrorItem[]; warnings: string[]; word_count: number; source: WorkingManuscript["source"] } | null> {
+  const manuscript = await resolveWorkingManuscript(ctx.projectRoot, chapter);
+  if (!manuscript) return null;
+  if (manuscript.source === "manuscript" && !includeFormal) {
+    const state = await loadStateDocument(ctx.projectRoot);
+    if ("error" in state) return null;
+    const command = state.doc.getIn(["checkpoint", "last_command"]);
+    if (command !== `write ${chapter}` && command !== `rewrite ${chapter}`) return null;
   }
+  const raw = await readFile(manuscript.path, "utf-8");
   const errors: ToolErrorItem[] = [];
   const warnings: string[] = [];
   const body = visibleBodyText(raw);
@@ -232,7 +237,7 @@ export async function checkManuscriptContract(
     errors.push({ field: "manuscript_contract", expected: "结尾是完整句（句末标点收束）", actual: `末字符「${trimmedBody.slice(-1)}」`, hint: "正文疑似被截断，补完最后一句" });
   }
   if (CONTRACT_ASCII_QUOTE_CN_RE.test(raw)) warnings.push("发现 ASCII 引号包中文对白，建议统一为中文弯引号");
-  return { errors, warnings };
+  return { errors, warnings, word_count: wordCount, source: manuscript.source };
 }
 
 /**
@@ -277,7 +282,8 @@ export function normalizeCornerQuotesWhenSoleForm(text: string): string {
  * novel_check_manuscript_contract：/write 写手完成后立即预检本章 staging 正文。
  * 先做引号机械归一（ASCII 成对交替 + 整篇独用直角引号时按弯引号统一；
  * 有变化才写回；此时正文尚未进审校，指纹链不受影响），
- * 再跑机械合同。无 staging 一律放行（作者手改 / 存量老书链路不受门）。
+ * Then check the working manuscript, including a formal-path rewrite.
+ * A missing manuscript is an error, not a successful skipped check.
  * 归一只在本 handler 做——writers 记忆入口与 update_progress 共用的
  * checkManuscriptContract 保持纯读，账房门不写文件。
  */
@@ -308,27 +314,30 @@ export async function novelCheckManuscriptContract(
       normalized = true;
     }
   } catch {
-    // 无 staging：交由 checkManuscriptContract 返回 null 免检
+    // Formal manuscripts are read-only during explicit preflight.
   }
 
-  const contract = await checkManuscriptContract(ctx, chapter);
+  const contract = await checkManuscriptContract(ctx, chapter, true);
   if (!contract) {
     return {
-      ok: true,
+      ok: false,
       chapter,
       staging: false,
-      errors: [],
+      errors: [{ field: "manuscript_contract", expected: "存在可检查的正文", actual: "正文不存在", hint: "先写入本章正文，再执行交付检查" }],
       warnings: [],
       normalized: false,
-      message: "本章无草稿区正文，合同免检",
+      message: "正文不存在，未执行合同检查",
     };
   }
 
-  const { errors, warnings } = contract;
+  const { errors, warnings, word_count, source } = contract;
   return {
     ok: errors.length === 0,
     chapter,
-    staging: true,
+    staging: source === "staging",
+    source,
+    word_count,
+    word_count_range: getChapterWordCountRange(ctx.wordsPerChapter),
     errors,
     warnings,
     normalized,
@@ -800,7 +809,7 @@ export async function novelUpdateProgress(
     );
   }
 
-  // 机械合同门：staging 上的半成品不得进正式路径（无 staging 免检，见 checkManuscriptContract）
+  // Check active generation drafts even when the writer used the formal path.
   const contract = await checkManuscriptContract(ctx, chapter);
   if (contract && contract.errors.length > 0) return errorResponse(contract.errors);
 

@@ -167,7 +167,7 @@ export async function novelCommitChapter(
 
   const chapter = args["chapter"] as number;
 
-  // 机械合同门：staging 上的半成品不得进记忆（无 staging 免检，见 checkManuscriptContract）
+  // Reject invalid staged drafts and formal drafts in an active generation workflow.
   const contract = await checkManuscriptContract(ctx, chapter);
   if (contract && contract.errors.length > 0) return errorResponse(contract.errors);
 
@@ -578,7 +578,7 @@ export async function novelSubmitExtraction(
 
   const chapter = args["chapter"] as number;
 
-  // 机械合同门：staging 上的半成品不得进记忆（无 staging 免检，见 checkManuscriptContract）
+  // Reject invalid staged drafts and formal drafts in an active generation workflow.
   const contract = await checkManuscriptContract(ctx, chapter);
   if (contract && contract.errors.length > 0) return errorResponse(contract.errors);
 
@@ -689,7 +689,7 @@ export async function novelCommitExtractionUnion(
     );
   }
 
-  // 机械合同门：staging 上的半成品不得进记忆（无 staging 免检，见 checkManuscriptContract）
+  // Reject invalid staged drafts and formal drafts in an active generation workflow.
   const contract = await checkManuscriptContract(ctx, chapter);
   if (contract && contract.errors.length > 0) return errorResponse(contract.errors);
 
@@ -920,6 +920,7 @@ export async function novelConsolidate(
 
 interface ReviewIssue {
   severity: "blocker" | "note";
+  category?: "continuity" | "readability";
   where: string;
   what: string;
   fix_hint: string;

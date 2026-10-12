@@ -258,7 +258,7 @@ describe("novel_update_progress", () => {
     writeManuscript(root, 1, "第一章正文内容五千字略。");
     await passReview(ctx, root, 2, "第二章正文内容。");
 
-    const result = (await novelUpdateProgress({ chapter: 2 }, ctx)) as Record<string, unknown>;
+    const result = (await novelUpdateProgress({ chapter: 2 }, { ...ctx, wordsPerChapter: 8 })) as Record<string, unknown>;
 
     expect(result["ok"]).toBe(true);
     expect(result["completed_chapters"]).toEqual([1, 2]);
@@ -635,6 +635,22 @@ function cleanBody(chars = 3000): string {
 }
 
 describe("checkManuscriptContract", () => {
+  it("checks a formal manuscript during an active rewrite", async () => {
+    const { ctx, root } = await createProjectFixture();
+    await mkdir(join(root, "manuscript", "vol-01"), { recursive: true });
+    await writeFile(join(root, "manuscript", "vol-01", "ch-004.md"), cleanBody(1623));
+    await novelCheckpoint({ command: "rewrite", chapter: 4, step: 3 }, ctx);
+
+    const result = await checkManuscriptContract({ ...ctx, wordsPerChapter: 2200 }, 4);
+
+    expect(result).not.toBeNull();
+    expect(result?.errors.some((error) => error.actual === "1623 字")).toBe(true);
+    const before = await readFile(join(root, ".narracat", "state.yaml"), "utf-8");
+    const progress = await novelUpdateProgress({ chapter: 4 }, { ...ctx, wordsPerChapter: 2200 }) as Record<string, unknown>;
+    expect(progress.ok).toBe(false);
+    expect(await readFile(join(root, ".narracat", "state.yaml"), "utf-8")).toBe(before);
+  });
+
   it("无 staging 返回 null（免检）", async () => {
     const { ctx } = await createProjectFixture();
 
@@ -813,7 +829,7 @@ describe("novelCheckManuscriptContract", () => {
     expect(result["ok"]).toBe(false);
   });
 
-  it("无 staging → ok:true, staging:false, 免检提示", async () => {
+  it("rejects a missing manuscript instead of reporting a skipped check as success", async () => {
     const { ctx } = await createProjectFixture();
 
     const result = (await novelCheckManuscriptContract(
@@ -821,9 +837,26 @@ describe("novelCheckManuscriptContract", () => {
       ctx,
     )) as Record<string, unknown>;
 
-    expect(result["ok"]).toBe(true);
+    expect(result["ok"]).toBe(false);
     expect(result["staging"]).toBe(false);
-    expect(String(result["message"])).toContain("免检");
+    expect((result["errors"] as unknown[]).length).toBeGreaterThan(0);
+  });
+
+  it("checks the formal path and reports its measured count without changing the file", async () => {
+    const { ctx, root } = await createProjectFixture();
+    const folder = join(root, "manuscript", "vol-01");
+    await mkdir(folder, { recursive: true });
+    const path = join(folder, "ch-004.md");
+    const content = cleanBody(1623);
+    await writeFile(path, content);
+
+    const result = await novelCheckManuscriptContract({ chapter: 4 }, { ...ctx, wordsPerChapter: 2200 }) as Record<string, unknown>;
+
+    expect(result.ok).toBe(false);
+    expect(result.source).toBe("manuscript");
+    expect(result.word_count).toBe(1623);
+    expect(result.word_count_range).toEqual([1760, 2640]);
+    expect(await readFile(path, "utf-8")).toBe(content);
   });
 
   it("有 staging 且干净通过 → ok:true, staging:true, errors 空", async () => {

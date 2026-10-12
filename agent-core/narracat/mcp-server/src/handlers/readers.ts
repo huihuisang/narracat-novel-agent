@@ -952,6 +952,7 @@ export async function novelCheckProseHygiene(
 
 interface ReviewIssue {
   severity: "blocker" | "note";
+  category?: "continuity" | "readability";
   where: string;
   what: string;
   fix_hint: string;
@@ -998,6 +999,7 @@ export async function novelGetReview(
     verdict: row.verdict,
     blockers: issues.filter((i) => i.severity === "blocker"),
     notes: issues.filter((i) => i.severity === "note"),
+    readability_notes: issues.filter((i) => i.severity === "note" && i.category === "readability"),
     created_at: row.created_at,
   };
 }

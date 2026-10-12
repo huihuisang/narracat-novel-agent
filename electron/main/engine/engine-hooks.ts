@@ -8,14 +8,26 @@
 // 纯函数纪律：零 IO（不 readFile、不做任何系统调用），`now` 参数缺省
 // `Date.now()` 是唯一例外；零第三方依赖。
 
-const CHAPTER_MANUSCRIPT_PATH_REGEX = /manuscript\/(vol-[0-9]+\/)?ch-?[0-9]+\.md$/
+const CHAPTER_MANUSCRIPT_PATH_REGEX = /(?:manuscript\/(?:vol-[0-9]+\/)?ch-?[0-9]+|\.narracat\/staging\/ch-[0-9]+)\.md$/
 const BRIEF_STAGING_PATH_REGEX = /\.narracat\/staging\/ch-[^/]*\.brief\.md$/
 // 系统词表（原 check-brief-lint.sh 的 FORBIDDEN ERE 逐字移植；shell 版已删，此处是唯一一份）
 const BRIEF_FORBIDDEN_PATTERN =
   /novel_[a-z_]+|craft_pack_hints|style_directive|through_line_anchor|previous_chapter_briefs|ending_snippet|payoff_beat|storyline_focus|foreshadowing_touch|foreshadowing_due|word_count_range|chapter_outline|style_examples|reference_path|pack_id|pack_path|manuscript_path|outline_path|semantic_context|state_changes|planned_state_changes|heartbeat_moment|continuation_hook|emotional_tone|character_cards|opening_snippet|core_foreshadowing|core_experience|current_arc_tension|current_antagonist_agent|mechanism_note|arc_summaries|matched_triggers|key_events|world_rules|derived_relationships|character_relationships|\b(canon|tentative|open)\b|[A-Z]-[A-Z0-9]+(-[A-Z0-9]+)*/
 const BRIEF_MARKER_FRESH_MS = 5 * 60_000
-const DEFAULT_WORD_MIN = 1800
-const DEFAULT_WORD_MAX = 4000
+const DEFAULT_WORD_MIN = 2400
+const DEFAULT_WORD_MAX = 3600
+
+function chapterWordCountRange(target?: number): [number, number] {
+  return typeof target === 'number' && target > 0
+    ? [Math.round(target * 0.8), Math.round(target * 1.2)]
+    : [DEFAULT_WORD_MIN, DEFAULT_WORD_MAX]
+}
+
+function manuscriptWordCount(content: string): number {
+  return content
+    .replace(/<!--\s*chapter_metadata\s*:[\s\S]*?-->/gi, '')
+    .replace(/[\s\p{P}\p{S}]/gu, '').length
+}
 
 export interface ChapterWordcountArgs {
   filePath: string
@@ -24,8 +36,8 @@ export interface ChapterWordcountArgs {
 }
 
 /**
- * PostToolUse(Write) 章节字数提示：仅对 manuscript/(vol-VV/)?ch-NNN.md 生效。
- * 对齐 .sh 的 `tr -d '[:space:]' | wc -m`：按去除空白后的字符数计数（非 byte 长度）。
+ * Match the MCP manuscript contract for staged and formal chapter paths.
+ * Count visible text without metadata, whitespace, punctuation, or symbols.
  */
 export function checkChapterWordcount(args: ChapterWordcountArgs): string | undefined {
   const { filePath, content, wordsPerChapter } = args
@@ -34,14 +46,8 @@ export function checkChapterWordcount(args: ChapterWordcountArgs): string | unde
     return undefined
   }
 
-  let min = DEFAULT_WORD_MIN
-  let max = DEFAULT_WORD_MAX
-  if (typeof wordsPerChapter === 'number' && wordsPerChapter > 0) {
-    min = Math.floor((wordsPerChapter * 7) / 10)
-    max = Math.floor((wordsPerChapter * 3) / 2)
-  }
-
-  const words = Array.from(content.replace(/\s/g, '')).length
+  const [min, max] = chapterWordCountRange(wordsPerChapter)
+  const words = manuscriptWordCount(content)
 
   if (words < min) {
     return `章节字数 ${words} 低于目标区间下限 ${min}（${filePath}）。可能需要补写。`
@@ -179,19 +185,14 @@ export function judgeChapterWriterOutput(args: ChapterWriterOutputArgs): string[
   }
 
   const rawText = manuscriptText ?? ''
-  const words = Array.from(rawText.replace(/\s/g, '')).length
+  const words = manuscriptWordCount(rawText)
   if (words === 0) {
     return [`第 ${chapter} 章正文文件为空（${manuscriptPath}）。需要重新生成本章正文。`]
   }
 
   const messages: string[] = []
 
-  let min = DEFAULT_WORD_MIN
-  let max = DEFAULT_WORD_MAX
-  if (typeof wordsPerChapter === 'number' && wordsPerChapter > 0) {
-    min = Math.floor((wordsPerChapter * 7) / 10)
-    max = Math.floor((wordsPerChapter * 3) / 2)
-  }
+  const [min, max] = chapterWordCountRange(wordsPerChapter)
   if (words < min) {
     messages.push(`第 ${chapter} 章字数 ${words} 低于目标区间下限 ${min}（${manuscriptPath}）。需要补写到目标区间。`)
   } else if (words > max) {

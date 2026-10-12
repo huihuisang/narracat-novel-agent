@@ -523,6 +523,7 @@ export const TOOL_DEFINITIONS = [
                                 enum: ["blocker", "note"],
                                 description: "blocker=确认的客观错误；note=存疑不影响结论",
                             },
+                            category: { type: "string", enum: ["continuity", "readability"], description: "continuity=前后事实与规则；readability=句意、行动原因、对白或段落表达" },
                             where: { type: "string", description: "问题位置" },
                             what: { type: "string", description: "错在哪，含证据" },
                             fix_hint: { type: "string", description: "一句可执行的修法" },
@@ -901,7 +902,7 @@ export const TOOL_DEFINITIONS = [
     },
     {
         name: "novel_check_manuscript_contract",
-        description: "/write 写手完成后立即预检本章草稿的机械合同：非空/字数下限/无围栏/无前言/未截断为硬项，超上限/引号为软提醒；顺手把 ASCII 引号包中文机械归一为弯引号；无草稿一律放行",
+        description: "预检本章工作正文（草稿优先，也检查正式路径）：非空、实际字数下限、无围栏、无前言、未截断为硬项；返回实际字数与目标区间。只归一草稿引号，不改正式稿；正文不存在时报错。通过仅表示机械合同满足，不代表句意或阅读质量通过。",
         inputSchema: {
             type: "object",
             properties: {

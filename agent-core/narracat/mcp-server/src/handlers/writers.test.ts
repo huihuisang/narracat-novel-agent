@@ -29,7 +29,8 @@ import {
   backfillReviewArtifacts,
   novelSubmitDialogueSamples,
 } from "./writers.js";
-import { stagingManuscriptPath } from "./state-sync.js";
+import { stagingManuscriptPath, novelCheckpoint } from "./state-sync.js";
+import { novelGetReview } from "./readers.js";
 import { validateOutlineBookPayload } from "./validators.js";
 
 function loadFixture<T>(name: string): T {
@@ -1590,6 +1591,18 @@ describe("novel_submit_chapter_outline", () => {
 });
 
 describe("novel_commit_chapter", () => {
+  it("rejects a short formal-path draft during an active rewrite before writing memory", async () => {
+    const { ctx, root, db } = createProject();
+    writeManuscript(root, 2, `${"字".repeat(1623)}。`);
+    await novelCheckpoint({ command: "rewrite", chapter: 2, step: 3 }, ctx);
+
+    const result = await novelCommitChapter(loadFixture("commit-chapter-v5-valid.json"), { ...ctx, wordsPerChapter: 2200 }) as Record<string, unknown>;
+
+    expect(result.ok).toBe(false);
+    expect((result.errors as Array<{ actual: string }>).some((error) => error.actual === "1623 字")).toBe(true);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM chapter_summaries").get()).toEqual({ n: 0 });
+  });
+
   it("字数守卫：收尾时低于目标 70% → 返回 word_count_warning 并在 message 标注（不阻断）", async () => {
     const { ctx, root } = createProject();
     for (const n of ["林晚", "执事", "沈决", "赵伯"]) writeCharacter(root, n);
@@ -2341,6 +2354,19 @@ describe("记忆入口合同门", () => {
 });
 
 describe("novel_submit_review", () => {
+  it("returns readability notes separately from continuity blockers", async () => {
+    const { ctx, root } = createProject();
+    const issue = { severity: "note", category: "readability", where: "第3段", what: "人物的回答没有说明他建议对方做什么。", fix_hint: "改成符合当前事实的具体建议。" };
+
+    await novelSubmitReview({ chapter: 2, issues: [issue] }, ctx);
+    const review = await novelGetReview({ chapter: 2 }, ctx) as Record<string, unknown>;
+
+    expect(review.verdict).toBe("pass");
+    expect(review.readability_notes).toEqual([issue]);
+    const saved = JSON.parse(readFileSync(join(root, "reviews", "ch-002-review.json"), "utf-8"));
+    expect(saved.issues[0].category).toBe("readability");
+  });
+
   it("blocker → fail，落结构化 JSON 契约 + 入库", async () => {
     const { ctx, root, db } = createProject();
 
