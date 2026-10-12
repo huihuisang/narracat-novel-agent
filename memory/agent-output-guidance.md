@@ -16,6 +16,15 @@ requirements. Tests cover direct request delivery and whole-chapter re-review
 in both write and rewrite commands. Report compliance from the final text, not
 from the writer's self-report or the presence of a requirement in the brief.
 
+The final 4.0.194 package passes signing, resource boundaries, packaged memory,
+and offline embedding checks. Its four writing and review sources match the
+checkout; 3922 App tests and OPS checks pass. Installation is still pending.
+The 4.0.193 targeted draft and cold pass use staging and measure 1966 words.
+Direct reading still found the water dialogue, date, and concentrated medication
+facts. A full review is running. All 166 author files still match the latest
+backup, so the formal manuscript has not been replaced. Mac locked again;
+desktop completion requires the author to unlock. Keep the model and settings.
+
 The 4.0.192 continuation read the craft source and rebuilt its brief, but the
 builder returned the existing formal manuscript as its output path. The writer
 dispatch followed that path despite the runtime staging instruction. Engine
