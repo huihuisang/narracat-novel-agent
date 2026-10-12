@@ -1,5 +1,16 @@
 # Shared agent output guidance
 
+The author rejected the resulting chapter 4 prose as difficult to read. A
+comparison with its local-revision brief found that the phrase about rumors
+being close to the mother was already in the brief and was copied into the
+manuscript. The brief also placed the medication date, clinic, quantity, and
+remaining doses in one dialogue instruction; the output put them in one speech.
+The brief's vague instruction to wait for police procedures also survived in
+dialogue without a clear answer to the mother's question. Review the brief's
+own language and scene priorities before adding more prohibited expressions.
+Required facts need a credible source and a natural place in the scene; they
+do not all need to appear in one character's speech.
+
 On 2026-10-12, the installed 4.0.190 App revised chapter 4's structured outline
 and rewrote its manuscript with the configured model. The actual main session
 read the current craft source, and writer dispatches carried chapter-specific
