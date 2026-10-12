@@ -33,7 +33,7 @@ allowed-tools: [Agent, Read, Write, Grep, Glob, AskUserQuestion, "mcp__narracat_
 ## 步骤 3：正文生成
 
 1. 将步骤 1 返回的 draft_path 记为本轮 {manuscript_path}，写手、检查和审校均使用它；步骤 1 读到的旧稿保留在正式路径，验收通过后由 `novel_update_progress` 转正。
-2. 把用户的重写要求 Write 到 `.narracat/staging/ch-{三位章号}.request.md`，本次无要求时写明「按最新版细纲重写」，不得采用旧轮次遗留要求。
+2. 把用户的重写要求 Write 到 `.narracat/staging/ch-{三位章号}.request.md`，原话完整保存，不改写、不补充事实。本次无要求时写明「按最新版细纲重写」，不得采用旧轮次遗留要求。
 3. Read `${CLAUDE_PLUGIN_ROOT}/commands/write.md`，只复用其中步骤 3a 的任务书组装规则，以本轮 {pack_path}、作者要求和当前写法来源生成 `.narracat/staging/ch-{三位章号}.brief.md`。不执行该命令的确认、进度或收尾步骤。任务书指出应展开的场景和顾虑，不搬运旧稿的难句，不预写旁白让写手照抄；书级声音与参考开关按本次上下文包实际状态处理。
 4. 派发写手：
 
@@ -42,6 +42,7 @@ Task(chapter-writer): "重写第 {chapter_num} 章正文。
 目标字数区间: {word_count_range 的下限}-{word_count_range 的上限} 字。
 输出路径: {manuscript_path}
 任务书路径: {brief 路径}
+作者要求路径: {request 路径}
 按任务书写完整场景，信息与结尾不改，句子和对白由人物当前处境决定；不要照抄任务书的说明句。"
 ```
 
@@ -55,14 +56,15 @@ Task(chapter-writer): "重写第 {chapter_num} 章正文。
    ```
    Task(continuity-editor): "审校第 {chapter_num} 章。
    正文路径: {manuscript_path}
+   作者要求路径: {request 路径}
    WritingContextPack 路径: {pack_path}"
    ```
 
 2. 调 `novel_get_review(chapter=chapter_num)` 取 `{verdict, blockers[], readability_notes[]}`。
 3. verdict=fail 或有 readability_notes → 把两类问题合并后定向修复一次（上限 1 轮）：
-   - Task(chapter-writer, thinking="off")："只修复以下问题涉及的段落，保留其余事件与结尾：{合并的问题清单原样列出}。正文路径: {manuscript_path}。任务书路径: {brief 路径}。"
+   - Task(chapter-writer, thinking="off")："只修复以下问题涉及的段落，保留其余事件与结尾：{合并的问题清单原样列出}。正文路径: {manuscript_path}。任务书路径: {brief 路径}。作者要求路径: {request 路径}。"
    - 修复后先调 `novel_check_manuscript_contract`，失败按步骤 3 的合同修复上限处理。所有补写与清理完成后才能复审，不在最终审校之后追加文字。
-   - Task(continuity-editor)："审校第 {chapter_num} 章。只复验下列已修复问题: {合并的问题清单原样列出}。正文路径: {manuscript_path}。WritingContextPack 路径: {pack_path}。"
+   - Task(continuity-editor)："审校第 {chapter_num} 章。通读最后修改的全章，重点核对下列已修复问题: {合并的问题清单原样列出}，新发现的问题照常记录。正文路径: {manuscript_path}。作者要求路径: {request 路径}。WritingContextPack 路径: {pack_path}。"
    - 再调 `novel_get_review`。仍 fail → 调 `novel_checkpoint(command="rewrite", step=4, chapter=chapter_num)`，停止并向用户报告 blockers，等人工处理。
 4. verdict=pass → 继续步骤 5。复审后仍有表达建议就列出遗留原句，不追加改稿轮；PASS 不等于表达全部合格，机械扫描通过也不等于“已无AI味”。
 

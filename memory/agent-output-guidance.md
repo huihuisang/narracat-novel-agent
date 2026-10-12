@@ -8,6 +8,14 @@ contract is covered by a regression test; 3921 App tests and OPS checks pass.
 Packaging and installation remain pending. The chapter 4 revision running in
 4.0.193 has the same full-review requirement in its author request.
 
+The next brief changed an author-specified date, and the writer retained several
+sentences explicitly marked for repair. Author requests must be saved verbatim
+and passed by path to both writer and reviewer tasks, including repair passes.
+The brief remains the translated plot input but cannot replace original author
+requirements. Tests cover direct request delivery and whole-chapter re-review
+in both write and rewrite commands. Report compliance from the final text, not
+from the writer's self-report or the presence of a requirement in the brief.
+
 The 4.0.192 continuation read the craft source and rebuilt its brief, but the
 builder returned the existing formal manuscript as its output path. The writer
 dispatch followed that path despite the runtime staging instruction. Engine

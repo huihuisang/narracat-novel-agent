@@ -32,6 +32,9 @@ sentence meaning and readability. The final report overstated both results.
   Remaining notes are reported to the author; the single-revision limit remains.
 - Briefs describe facts and scene priorities without prewriting decorative
   narration or forcing several required facts into one speech.
+- Chapter request files preserve the author's original words. Writer and reviewer
+  tasks read them directly when present. A compressed brief must not replace or
+  change those requirements, and completion claims must match the final text.
 
 ## Consequences
 

@@ -14,10 +14,27 @@ describe('NarraCat command run resolver', () => {
   test('delivers a full-chapter review after targeted repairs', async () => {
     const source = await readFile(join(process.cwd(), 'agent-core/narracat/commands/write.md'), 'utf-8')
     const reviewer = await readFile(join(process.cwd(), 'agent-core/narracat/agents/continuity-editor.md'), 'utf-8')
+    const rewrite = await readFile(join(process.cwd(), 'agent-core/narracat/commands/rewrite.md'), 'utf-8')
     expect(source).toContain('通读最后修改的全章')
     expect(source).not.toContain('只复验下列已修复问题')
     expect(reviewer).toContain('按完整工作方式重新检查全章')
     expect(reviewer).not.toContain('不重查全文')
+    expect(rewrite).toContain('通读最后修改的全章')
+    expect(rewrite).not.toContain('只复验下列已修复问题')
+  })
+
+  test('preserves author requests as direct writer and reviewer inputs', async () => {
+    const root = join(process.cwd(), 'agent-core/narracat')
+    const write = await readFile(join(root, 'commands/write.md'), 'utf-8')
+    const rewrite = await readFile(join(root, 'commands/rewrite.md'), 'utf-8')
+    const writer = await readFile(join(root, 'agents/chapter-writer.md'), 'utf-8')
+    const reviewer = await readFile(join(root, 'agents/continuity-editor.md'), 'utf-8')
+
+    expect(write).toContain('作者要求路径: {request 路径，存在时提供}')
+    expect(rewrite).toContain('原话完整保存，不改写、不补充事实')
+    expect(rewrite).toContain('作者要求路径: {request 路径}')
+    expect(writer).toContain('逐条核对作者要求')
+    expect(reviewer).toContain('作者要求文件')
   })
 
   test('delivers the rewrite brief, staging path, and readability repair route without a formal-path generation instruction', async () => {

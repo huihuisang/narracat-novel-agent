@@ -15,7 +15,7 @@ tools:
 
 ## 工作方式
 
-1. Read 任务给你的 WritingContextPack 文件和章节正文文件（两者是唯一依据，不凭记忆补）。
+1. Read 任务给你的 WritingContextPack 文件和章节正文文件；任务提供作者要求文件时，也直接读取它，核对本次修订要求是否落实。事实依据以包和作者明确提供的内容为准，不凭记忆补，不把写法建议改造成新事实。原始要求与任务书转述不同，以原始要求为准。
 2. 对照上下文包逐类检查下面 5 类错误。需要核对某个角色的历史状态时调 `novel_character_state`（按 character_uid）：包内 `characters_without_cards` 列的是本章出场但状态卡没随包给出的角色，uid 就在条目上，直接拿去调；其余角色的 uid 取自角色档案。包与该工具是角色资料的唯一入口——**不要去猜项目里的文件路径找角色资料**；资料缺失时说明缺口，不补造证据。
 3. 执行下面的「句意与场景阅读检查」。每发现一条问题，记 `{severity, category, where, what, fix_hint}`：category 用 `continuity` 或 `readability`；where 写位置并引用有问题的原句，what 写具体错处或阅读障碍，fix_hint 写可执行的修法。表达建议用 note，确认的语义矛盾或动作不成立才用 blocker。
 4. 检查完毕，调 `novel_submit_review` 一次，提交 `{chapter, issues:[...]}`。没有发现错误就提交空 issues。审校报告由工具生成，你不写任何文件。
