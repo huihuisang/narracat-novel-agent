@@ -1,5 +1,14 @@
 # Shared agent output guidance
 
+The 4.0.192 continuation read the craft source and rebuilt its brief, but the
+builder returned the existing formal manuscript as its output path. The writer
+dispatch followed that path despite the runtime staging instruction. Engine
+4.0.193 adds `draft_path` to the builder response. Write and rewrite commands
+use it for generation; `manuscript_path` retains its existing read semantics.
+Tests cover a new chapter and a chapter with a formal manuscript. The current
+run is allowed to finish with the formal contract gate; its original manuscript
+is backed up. Do not replace the running App mid-generation.
+
 The first installed 4.0.191 rewrite reached brief assembly, but the main agent
 mistook disabled selected references for a disabled craft library. The library
 was enabled in the saved settings. It did not read the craft source and copied
@@ -8,6 +17,12 @@ before it wrote a new manuscript. Chapter 4 memory is rolled back and its rewrit
 checkpoint remains at step 2. Engine 4.0.192 adds an explicit enabled-library
 policy to main and dispatched sessions and separates both sources in brief
 assembly. The four source combinations are covered by regression tests.
+
+The signed 4.0.192 App is installed and all 3214 entries match the package.
+Its chapter 4 continuation read the installed craft library. The run uses the
+existing model and author switches; final prose and memory completion remain
+pending. The backup is `20261012-133252-craft-policy-192` in the install backup
+directory; the previous App is retained there.
 
 Engine 4.0.191 fixes the formal-path contract bypass for active write and rewrite
 checkpoints. Explicit preflight checks both paths and returns the measured count;

@@ -11,7 +11,7 @@ allowed-tools: [Agent, TaskCreate, TaskUpdate, Read, Write, Edit, Glob, AskUserQ
 - 每个步骤完成时调用 `mcp__narracat_memory__novel_checkpoint(command="write", step=步骤号, chapter=chapter_num)`，下文简写为 novel_checkpoint(step=N)。
 - 派发 subagent 只传章号、路径与参数，不复述 agent 内部规则。
 - 不要直接编辑 state.yaml：断点经 novel_checkpoint 写入，进度经 novel_update_progress 写入。
-- 上下文包、正文、细纲的路径一律使用步骤 1 工具返回的 pack_path / manuscript_path / outline_path，不自行拼路径。
+- 上下文包、生成正文、细纲的路径一律使用步骤 1 工具返回的 pack_path / draft_path / outline_path，不自行拼路径。manuscript_path 用于读取既有稿件，不作生成目标。
 - 进度与控制状态边界见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/command-progress.md`：automation_level 取值、断点恢复的内部状态、内部步骤编号是控制状态，不复述进面向作者的文本，也不写进任务列表的步骤名。
 - **对作者说话**：内部保留准确的字段、路径、工具与角色标识；对话、问题选项和报告使用作者能理解的说法，说明结果、影响和下一步。译名与展示边界见 `${CLAUDE_PLUGIN_ROOT}/docs/contracts/user-facing-language.md`。
 
@@ -39,11 +39,11 @@ allowed-tools: [Agent, TaskCreate, TaskUpdate, Read, Write, Edit, Glob, AskUserQ
 ## 步骤 1：上下文聚合
 
 1. 调 `mcp__narracat_memory__novel_build_writing_context_pack(chapter=chapter_num)`。
-2. 返回 ok → 上下文包已由工具落盘。记下返回的 pack_path、manuscript_path、outline_path 与 word_count_range，后续步骤直接引用。
+2. 返回 ok → 上下文包已由工具落盘。记下返回的 pack_path、draft_path、outline_path 与 word_count_range，将 draft_path 记为本轮 manuscript_path，后续写手、检查与审校直接引用这个草稿路径。工具返回的 manuscript_path 只用于读取既有稿件，不覆盖它。
 3. 返回错误 → 根据 errors 说明原因和可执行的处理办法，向作者展示时翻译内部标识，终止。
 4. novel_checkpoint(step=1)。
 
-正文路径由工具返回，写作期间指向草稿区；主会话与 subagent 一律用返回的 manuscript_path，不自行拼路径。
+生成正文使用工具返回的 draft_path，始终指向草稿区。已有正式稿不影响生成目标；通过验收后由 novel_update_progress 转正。
 
 ## 步骤 2：开写确认
 

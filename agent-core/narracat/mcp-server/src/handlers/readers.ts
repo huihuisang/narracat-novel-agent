@@ -2927,6 +2927,7 @@ export async function novelBuildWritingContextPack(
     pack_path: packPath,
     outline_path: join("outline", volDirSegment, basename(outlinePath)),
     manuscript_path: manuscriptPathOut,
+    draft_path: stagingRel,
     word_count_range: wordCountRange,
     // 主会话（/write step-2）拿连贯性预警 + 系统诊断的全集；写手只拿包内 warnings
     warnings: [...warnings, ...buildNotes],

@@ -19,7 +19,7 @@ allowed-tools: [Agent, Read, Write, Grep, Glob, AskUserQuestion, "mcp__narracat_
 
 ## 步骤 1：构建上下文包（不修改记忆与正文）
 
-- 调 `novel_build_writing_context_pack(chapter=chapter_num)`，记下返回的 pack_path、manuscript_path 与 word_count_range（上下文包由工具落盘），后续步骤直接引用。
+- 调 `novel_build_writing_context_pack(chapter=chapter_num)`，记下返回的 pack_path、manuscript_path、draft_path 与 word_count_range（上下文包由工具落盘）。manuscript_path 用于读旧稿，draft_path 是本轮生成目标，两者不要混用。
 - 工具返回错误 → 终止：不回滚记忆、不覆盖正文。
 - Read {manuscript_path} 当前正文，保存为旧稿（步骤 6 级联分析用）。
 - Read {pack_path}：包里有 `characters_without_cards` 时逐个按条目上的 `character_uid` 调 `novel_character_state` 补查，把这些角色的当前状态翻成人话记为 `{角色状态补充}`（无该键则为空），步骤 3 派发时附上。本命令的写手直接读包、手上没有查询工具，未查到的状态注明未知，不交给写手猜测。
@@ -32,7 +32,7 @@ allowed-tools: [Agent, Read, Write, Grep, Glob, AskUserQuestion, "mcp__narracat_
 
 ## 步骤 3：正文生成
 
-1. 本轮正文写入 `.narracat/staging/ch-{三位章号}.md`，将这个路径记为 {manuscript_path}；步骤 1 读到的旧稿保留在正式路径，验收通过后由 `novel_update_progress` 转正。
+1. 将步骤 1 返回的 draft_path 记为本轮 {manuscript_path}，写手、检查和审校均使用它；步骤 1 读到的旧稿保留在正式路径，验收通过后由 `novel_update_progress` 转正。
 2. 把用户的重写要求 Write 到 `.narracat/staging/ch-{三位章号}.request.md`，本次无要求时写明「按最新版细纲重写」，不得采用旧轮次遗留要求。
 3. Read `${CLAUDE_PLUGIN_ROOT}/commands/write.md`，只复用其中步骤 3a 的任务书组装规则，以本轮 {pack_path}、作者要求和当前写法来源生成 `.narracat/staging/ch-{三位章号}.brief.md`。不执行该命令的确认、进度或收尾步骤。任务书指出应展开的场景和顾虑，不搬运旧稿的难句，不预写旁白让写手照抄；书级声音与参考开关按本次上下文包实际状态处理。
 4. 派发写手：

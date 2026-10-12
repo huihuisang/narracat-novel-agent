@@ -76,7 +76,7 @@ export async function novelCommitChapter(args, ctx) {
     if (!validation.valid)
         return errorResponse(validation.errors);
     const chapter = args["chapter"];
-    // 机械合同门：staging 上的半成品不得进记忆（无 staging 免检，见 checkManuscriptContract）
+    // Reject invalid staged drafts and formal drafts in an active generation workflow.
     const contract = await checkManuscriptContract(ctx, chapter);
     if (contract && contract.errors.length > 0)
         return errorResponse(contract.errors);
@@ -372,7 +372,7 @@ export async function novelSubmitExtraction(args, ctx) {
     if (!validation.valid)
         return errorResponse(validation.errors);
     const chapter = args["chapter"];
-    // 机械合同门：staging 上的半成品不得进记忆（无 staging 免检，见 checkManuscriptContract）
+    // Reject invalid staged drafts and formal drafts in an active generation workflow.
     const contract = await checkManuscriptContract(ctx, chapter);
     if (contract && contract.errors.length > 0)
         return errorResponse(contract.errors);
@@ -446,7 +446,7 @@ export async function novelCommitExtractionUnion(args, ctx) {
     if (typeof chapter !== "number" || !Number.isInteger(chapter) || chapter < 1) {
         return singleError("chapter", "integer ≥ 1", `${typeof chapter}: ${JSON.stringify(chapter)}`, "传入要落并集的章号");
     }
-    // 机械合同门：staging 上的半成品不得进记忆（无 staging 免检，见 checkManuscriptContract）
+    // Reject invalid staged drafts and formal drafts in an active generation workflow.
     const contract = await checkManuscriptContract(ctx, chapter);
     if (contract && contract.errors.length > 0)
         return errorResponse(contract.errors);

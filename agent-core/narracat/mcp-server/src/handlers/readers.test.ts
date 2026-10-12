@@ -1386,6 +1386,7 @@ describe("novel_build_writing_context_pack", () => {
       pack_path: string;
       outline_path: string;
       manuscript_path: string;
+      draft_path: string;
       word_count_range: [number, number];
       warnings: string[];
     };
@@ -1395,6 +1396,7 @@ describe("novel_build_writing_context_pack", () => {
     expect(result.outline_path).toBe("outline/vol-01/ch-002.md");
     // 全新章：无 staging、无正式稿 → manuscript_path 落到 staging（写手写入目标，staging 工作解析语义）
     expect(result.manuscript_path).toBe(".narracat/staging/ch-002.md");
+    expect(result.draft_path).toBe(".narracat/staging/ch-002.md");
     expect(result.word_count_range).toEqual([2400, 3600]);
     expect(result).not.toHaveProperty("writing_context_pack");
 
@@ -1510,9 +1512,12 @@ describe("novel_build_writing_context_pack", () => {
 
     const result = (await novelBuildWritingContextPack({ chapter: 2 }, fixture.ctx)) as {
       manuscript_path: string;
+      draft_path: string;
     };
 
     expect(result.manuscript_path).toBe("manuscript/vol-01/ch-002.md");
+    expect(result.draft_path).toBe(".narracat/staging/ch-002.md");
+    expect(readFileSync(join(fixture.root, result.manuscript_path), "utf-8")).toContain("第2章");
   });
 
   it("semantic_context 剔除与前章摘要逐字重叠的冗余检索结果，同时保留不重叠的合法条目（真机实锤：score 0.03-0.05 的冗余凑数，spec §1.3 P5）", async () => {
