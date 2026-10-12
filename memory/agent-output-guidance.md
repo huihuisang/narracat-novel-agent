@@ -4,9 +4,8 @@ Installed output review found that both the write command and reviewer explicitl
 limited re-review to earlier findings. Engine 4.0.194 removes this restriction:
 review the final whole chapter and use prior findings as a focus list. New issues
 remain reportable, and the single targeted-repair limit still applies. The source
-contract is covered by a regression test; 3921 App tests and OPS checks pass.
-Packaging and installation remain pending. The chapter 4 revision running in
-4.0.193 has the same full-review requirement in its author request.
+contract is covered by a regression test. The final 3922 App tests and OPS
+checks pass, and the signed 4.0.194 App is installed.
 
 The next brief changed an author-specified date, and the writer retained several
 sentences explicitly marked for repair. Author requests must be saved verbatim
@@ -18,12 +17,33 @@ from the writer's self-report or the presence of a requirement in the brief.
 
 The final 4.0.194 package passes signing, resource boundaries, packaged memory,
 and offline embedding checks. Its four writing and review sources match the
-checkout; 3922 App tests and OPS checks pass. Installation is still pending.
+checkout; 3922 App tests and OPS checks pass. Installation is now complete:
+all 3214 entries match, the App launches, and author settings are unchanged.
+The backup is `20261012-151917-original-requests-194`.
 The 4.0.193 targeted draft and cold pass use staging and measure 1966 words.
 Direct reading still found the water dialogue, date, and concentrated medication
 facts. A full review is running. All 166 author files still match the latest
-backup, so the formal manuscript has not been replaced. Mac locked again;
-desktop completion requires the author to unlock. Keep the model and settings.
+backup before promotion. The 4.0.193 run later promoted a 1960-word draft after
+another repair and full review. Water and ending issues are repaired, but direct
+reading still found unclear monitoring text, an invented October 6 send date,
+and medication facts concentrated in one speech. Chapter 3 actually sends the
+message after 00:01; only its October 8 date is an older, separate conflict.
+The installed 4.0.194 App completed a local revision with explicit original-request
+paths and existing character UIDs. Writer and reviewer received the request file;
+the execution trace shows three writer reads. The App checked the draft at 1978
+words, reviewed it, committed chapter 4 with Chen Mo and Wang Fengxia, and promoted
+it. Direct reading then found a remaining incomplete sentence and a repeated OA
+conclusion. Two editorial corrections changed only those paragraphs. The App's
+author-sync comparison confirmed unchanged facts and recorded the new manuscript
+fingerprint. The final formal-file review completed with PASS, no issues, and
+1964 measured words. Its manuscript hash matches the final file. The workbench
+shows the corrected paragraph, date, review, and Agent ready state. Only manuscript
+chapter 4 differs among the 166 author files in the backup; the model and author
+settings are unchanged. The earlier chapter 3 date conflict remains outside this
+task. The generation receipt and state retain the pre-editorial count of 1978;
+the author-sync comparison changed no facts. Use the final review count when
+describing this final file, and do not imply that the App wrote the two editorial
+corrections or that PASS guarantees future prose quality.
 
 The 4.0.192 continuation read the craft source and rebuilt its brief, but the
 builder returned the existing formal manuscript as its output path. The writer
