@@ -229,6 +229,24 @@ Generation quality still requires output review. Direct-chat samples do not
 establish batch planner quality. Do not treat delivery tests or installation
 checks as prose-quality evidence.
 
+An existing-chapter review on installed 4.0.194 exposed a stale source path.
+The planner read protected Markdown outlines and copied old structural values
+even though the JSON outlines had changed. That run was stopped before submission.
+For an existing chapter, read its current JSON and manuscript before using a
+Markdown outline. Keep IDs and state changes from the JSON. Do not restore
+removed scenes from an old rendering. The App's first-tier outline editor can
+save the current positioning and render a fresh Markdown file from the latest
+JSON. This restored three matching outline pairs during the review. This was
+a data repair through the installed App, not a code fix for the planner.
+
+The installed App then reviewed three current manuscripts and JSON outlines.
+All three reports passed and matched the current manuscript hashes. One report
+kept a chapter-number format note. This did not establish that all prose was
+free of style issues. Old chapter memory still needs a separate correction;
+the review command did not update it. The Mac locked before that step. An older
+chapter cannot use the current latest-chapter-only sync command. A range rollback
+would also remove later chapter memory, so do not use it for a date correction.
+
 After the author unlocked the Mac, the final signed App with engine 4.0.188
 replaced `/Applications/NarraCat.app`. All 3214 installed entries match the
 package, and the three planning sources match the checkout. The old App was
