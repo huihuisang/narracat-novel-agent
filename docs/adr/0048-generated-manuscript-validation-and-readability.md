@@ -20,6 +20,10 @@ sentence meaning and readability. The final report overstated both results.
   files or invalidate their review fingerprints.
 - Rewrite builds a fresh brief from current sources and writes to staging. It
   reuses write's single cold revision and checks the final file before review.
+- Context assembly returns `draft_path` for generation and `manuscript_path`
+  for reading the working or existing manuscript. The presence of a formal
+  manuscript must not change the generation target. Review and author sync keep
+  the existing read-path behavior.
 - Review issues can carry an optional `continuity` or `readability` category.
   Confirmed factual or semantic errors remain blockers. Readability advice is
   a note and triggers at most one targeted revision in a writing workflow.

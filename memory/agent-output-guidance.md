@@ -9,6 +9,17 @@ Tests cover a new chapter and a chapter with a formal manuscript. The current
 run is allowed to finish with the formal contract gate; its original manuscript
 is backed up. Do not replace the running App mid-generation.
 
+The 4.0.192 draft measured 1869 words and 1872 after the cold revision. Formal
+preflight now checks its real count. Review returned a continuity blocker for
+the Friday server joke and a readability note for an incorrect character count.
+The parent combined both in a targeted writer task; the revised file is 1861
+words and re-review is running. Direct reading still found the premature rumor
+forwarding request, implausible water dialogue, and medication fields in one
+speech. The reviewer incorrectly claimed the forwarding request was not sent.
+Keep these for one combined follow-up revision, not repeated single-sentence
+review cycles. Mac is locked and desktop operations require the author to unlock.
+The 4.0.193 package is signed and verified but not installed yet.
+
 The first installed 4.0.191 rewrite reached brief assembly, but the main agent
 mistook disabled selected references for a disabled craft library. The library
 was enabled in the saved settings. It did not read the craft source and copied
