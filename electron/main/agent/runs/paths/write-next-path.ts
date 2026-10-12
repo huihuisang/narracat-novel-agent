@@ -5,6 +5,7 @@ import type { CreateSessionFingerprintFn, RunPlanResult } from '../run-options.t
 import { NARRACAT_COMMAND_ALLOWED_TOOLS } from '../../runtime/allowed-tools.ts'
 import type { AgentRuntimeAdapter, RuntimeRunConfig } from '../../runtime/types.ts'
 import { resolveWriteNextRun } from '../write-next.ts'
+import { continuousWritingInstruction } from '../continuous-writing-confirmation.ts'
 import type { ReadNarraCatCommandFile } from '../narracat-command.ts'
 
 export interface WriteNextPathInput {
@@ -83,7 +84,7 @@ export async function buildWriteNextRunPlan(input: WriteNextPathInput): Promise<
   return {
     ok: true,
     plan: {
-      prompt: resolved.prompt,
+      prompt: resolved.prompt + continuousWritingInstruction(request.skipChapterConfirmation),
       options,
       sessionContext,
       projectUpdate: {

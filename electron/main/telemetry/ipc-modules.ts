@@ -157,6 +157,8 @@ export const IPC_CHANNEL_MODULES: Readonly<Record<string, TelemetryModule | null
 
   // ── Agent 运行：由 chapter_write_* 两个专用事件承担，通道本身不计 ────
   'agent:start-run': null,
+  'agent:get-continuous-writing': null,
+  'agent:update-continuous-writing': null,
   'agent:cancel-run': null,
   'agent:answer-question': null,
   'agent:forget-session': null,

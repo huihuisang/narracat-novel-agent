@@ -1,6 +1,7 @@
 # ADR Index
 
 > This index is the quick status map for NarraCat-app ADRs. ADR files remain decision history; superseded or partially historical ADRs are kept and linked instead of deleted.
+
 >
 > Three numbers (0007, 0009, 0027) are reserved but not published here: they document the retired Agent SDK runtime era and were superseded by [0037](0037-agent-runtime-pi-migration.md). Their rows below carry the decision they stood for, without a file link.
 
@@ -49,6 +50,7 @@
 | [0041](0041-author-owned-prose-polish.md) | 作者自持的正文润色通道（非 Agent 直连大模型） | Accepted | Current 润色边界；定位为不承诺效果的自主权通道（出厂零模板），入库后 App 层追加、引擎零改动，护栏判「改了什么」而非「改了多少」；[0029](0029-two-tier-editing-direct-vs-agent-cascade.md)/[0031](0031-manuscript-editing-save-first-two-tier.md) 框架内的第三种正文写入来源。 |
 | [0046](0046-app-never-deletes-user-files.md) | App 永不删除非自有文件——更新/卸载只清 App 自有文件，交付物必须有上界 | Accepted | Current 数据安全底线；Windows 更新/卸载按白名单只删 App 自有文件 + 旧卸载器之前救出/装完放回；Missing 与 Invalid 项目分立且都无身份、不进 Workbench；卷级提交逐卷 upsert，子 agent 截断即停。编号跳过并行分支占用的 0042–0045。 |
 | [0047](0047-per-book-writer-prompt-sources.md) | 按书控制写手提示词来源 | Accepted | 独立写手提示词页；人设、声音卡与逐条作者要求开关，预览与运行同源，旧任务书失效与完整 HTTP 请求的取证边界。 |
+| [0049](0049-main-process-continuous-writing.md) | Main Process Continuous Writing | Accepted | App-owned sequential chapter runs, persisted plans, and explicit resume after restart. |
 
 ## Status Vocabulary
 

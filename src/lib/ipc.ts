@@ -10,6 +10,7 @@ import type {
   PolishVersionState,
   ProjectPolishSettings,
 } from '@shared/types/prose-polish'
+import type { ContinuousWritingInput } from '@shared/types/continuous-writing'
 import type {
   AgentEventEnvelopeV1,
   AgentEventsAfterResultV1,
@@ -436,6 +437,14 @@ export function selectDirectory(): Promise<string | null> {
 
 export function startAgentRun(request: AgentRunRequest): Promise<AgentRunStarted> {
   return window.electron.startAgentRun({ ...request, requestId: request.requestId ?? crypto.randomUUID() })
+}
+
+export function getContinuousWriting(projectPath: string) {
+  return window.electron.getContinuousWriting({ projectPath })
+}
+
+export function updateContinuousWriting(input: ContinuousWritingInput) {
+  return window.electron.updateContinuousWriting(input)
 }
 
 export function cancelAgentRun(runId: string): Promise<{ cancelled: boolean }> {

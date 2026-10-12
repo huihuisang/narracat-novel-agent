@@ -29,6 +29,7 @@ import { SIDEBAR_ROW_CLASS, WARNING_PILL_CLASS } from '@/design-system'
 import { useAgentStore } from '@/lib/agent-store'
 import { cn } from '@/lib/cn'
 import { WorkbenchTaskPointer } from './WorkbenchTaskPointer'
+import { ContinuousWritingControl } from './ContinuousWritingControl'
 import { confirmLeaveManuscriptEditor, useManuscriptEditorGuard } from '@/lib/manuscript-editor-guard'
 import { useManuscriptDrafts } from '@/lib/use-manuscript-drafts'
 import { usePendingMemorySyncMap } from '@/lib/use-pending-memory-sync'
@@ -477,6 +478,7 @@ export function WorkbenchPrimarySidebar({
         </div>
 
         <WorkbenchTaskPointer project={project} projectPath={projectPath} onNavigate={handleGuardedNavigation} />
+        {project ? <ContinuousWritingControl key={project.path} project={project} /> : null}
 
         {sections.length > 0 ? (
           <nav aria-label="工作台主菜单" className="space-y-1" data-workbench-primary-menu="true">

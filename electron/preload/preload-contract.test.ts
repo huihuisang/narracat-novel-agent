@@ -21,4 +21,17 @@ describe('preload IPC registration', () => {
     expect(preload).toContain("'novel:reveal-folder'")
     expect(mainHandlers).toContain("ipcMain.handle('novel:reveal-folder'")
   })
+
+  test('exposes continuous writing through registered handlers and shared types', () => {
+    const agent = readFileSync(fileURLToPath(new URL('../main/ipc/agent.ts', import.meta.url)), 'utf8')
+    const types = readFileSync(fileURLToPath(new URL('../../shared/types/ipc.d.ts', import.meta.url)), 'utf8')
+    for (const [method, channel] of [
+      ['getContinuousWriting', 'agent:get-continuous-writing'],
+      ['updateContinuousWriting', 'agent:update-continuous-writing'],
+    ]) {
+      expect(preload).toContain(`${method}:`)
+      expect(types).toContain(`${method}:`)
+      expect(agent).toContain(`ipcMain.handle('${channel}'`)
+    }
+  })
 })

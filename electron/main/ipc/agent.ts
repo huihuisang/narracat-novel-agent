@@ -1,5 +1,8 @@
 import { app, ipcMain } from 'electron'
 import { randomUUID } from 'node:crypto'
+import { realpath } from 'node:fs/promises'
+import { createContinuousWritingRuntime } from '../agent/runs/continuous-writing-runtime'
+import type { ContinuousWritingInput } from '@shared/types/continuous-writing'
 import { getApiKey } from '../secrets.ts'
 import {
   normalizeAgentCancelRun,
@@ -44,6 +47,23 @@ import {
 
 const agentRuntimeUnsubscribers = new WeakMap<Electron.WebContents, () => void>()
 let _agentRuntimeCoordinator: AgentRuntimeCoordinator | null = null
+let continuousWriting: ReturnType<typeof createContinuousWritingRuntime> | undefined
+let continuousWritingTimer: ReturnType<typeof setInterval> | undefined
+
+function getContinuousWriting() {
+  if (!continuousWriting) {
+    continuousWriting = createContinuousWritingRuntime(userDataPath(), getAgentRuntimeCoordinator())
+    let ticking = false
+    continuousWritingTimer = setInterval(() => {
+      if (ticking) return
+      ticking = true
+      void continuousWriting!.tick().catch((error) => console.error('Continuous writing failed:', error))
+        .finally(() => { ticking = false })
+    }, 1500)
+    continuousWritingTimer.unref()
+  }
+  return continuousWriting
+}
 
 export function getAgentRuntimeCoordinator(): AgentRuntimeCoordinator {
   if (!_agentRuntimeCoordinator) {
@@ -153,8 +173,10 @@ export function reconcileAgentRuntimeStartup(): Promise<number> {
   return getAgentRuntimeCoordinator().reconcileStartup()
 }
 
-export function settleAgentRuntimeBeforeQuit(): Promise<void> {
-  return getAgentRuntimeCoordinator().interruptAllForQuit()
+export async function settleAgentRuntimeBeforeQuit(): Promise<void> {
+  clearInterval(continuousWritingTimer)
+  await continuousWriting?.shutdown()
+  await getAgentRuntimeCoordinator().interruptAllForQuit()
 }
 
 export function hasActiveAgentRuntimeRuns(): boolean {
@@ -166,6 +188,26 @@ export async function invalidateAgentSessions(reason: string): Promise<void> {
 }
 
 export function registerAgentIpcHandlers(): void {
+  ipcMain.handle('agent:get-continuous-writing', async (event, input: unknown) => {
+    const value = readInputRecord(input, '连续写作参数非法。')
+    const projectPath = await realpath(readRequiredString(value, 'projectPath', '缺少小说路径。'))
+    subscribeAgentRuntimeSender(event.sender)
+    return getContinuousWriting().get(projectPath)
+  })
+  ipcMain.handle('agent:update-continuous-writing', async (event, input: unknown) => {
+    const value = readInputRecord(input, '连续写作参数非法。')
+    if (!['start', 'pause', 'resume'].includes(String(value.action))) throw new Error('连续写作操作非法。')
+    if (value.skipChapterConfirmation !== undefined && typeof value.skipChapterConfirmation !== 'boolean') {
+      throw new Error('开写确认参数非法。')
+    }
+    const projectPath = await realpath(readRequiredString(value, 'projectPath', '缺少小说路径。'))
+    subscribeAgentRuntimeSender(event.sender)
+    return getContinuousWriting().update({
+      projectPath, action: value.action as ContinuousWritingInput['action'],
+      endChapter: value.endChapter as number | undefined,
+      skipChapterConfirmation: value.skipChapterConfirmation as boolean | undefined,
+    })
+  })
   ipcMain.handle('agent:start-run', async (event, input: unknown): Promise<AgentRunStarted> => {
     const request = normalizeAgentRunRequest(input)
     subscribeAgentRuntimeSender(event.sender)

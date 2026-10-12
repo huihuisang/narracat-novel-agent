@@ -742,6 +742,33 @@ describe('createAgentRunManager', () => {
     })
   })
 
+  test('passes batch confirmation only to the selected chapter run', async () => {
+    const projectPath = await makeReadyProjectForRunManagerTest()
+    const prompts: string[] = []
+    const manager = createAgentRunManager({
+      readConfig: async () => deepseekConfig,
+      getApiKey: async () => 'sk-test-key',
+      agentCoreManifestExists: () => true,
+      readNarraCatCommandFile: () => '执行本章写作。',
+      runtime: fakeRuntime(async function* (args) {
+        prompts.push(String(args.prompt))
+        yield { type: 'result', subtype: 'success' }
+      }),
+      sendEvent: () => undefined,
+      appRoot: '/workspace/narracat-desktop',
+    })
+    for (const skipChapterConfirmation of [true, false]) {
+      await manager.startRun({ threadId: 'batch-confirmation', command: 'write-next', prompt: '',
+        projectPath, selectedChapter: 1, skipChapterConfirmation })
+      await manager.settleActiveRuns()
+    }
+    expect(prompts).toHaveLength(2)
+    expect(prompts[0]).toContain('仅跳过当前章的开写确认')
+    expect(prompts[0]).toContain('不修改 config.yaml')
+    expect(prompts[0]).toContain('只完成本章')
+    expect(prompts[1]).not.toContain('本次连续写作已由作者确认')
+  })
+
   test('captures agent-write before SDK startup and completes revision before project refresh and terminal', async () => {
     const projectPath = await makeReadyProjectForRunManagerTest()
     const lifecycle: string[] = []

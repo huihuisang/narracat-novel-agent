@@ -5,6 +5,7 @@ import type { CreateSessionFingerprintFn, RunPlanResult } from '../run-options.t
 import { NARRACAT_COMMAND_ALLOWED_TOOLS } from '../../runtime/allowed-tools.ts'
 import type { AgentRuntimeAdapter, RuntimeRunConfig } from '../../runtime/types.ts'
 import { resolveRecoverWriteRun } from '../recover-write.ts'
+import { continuousWritingInstruction } from '../continuous-writing-confirmation.ts'
 import type { ReadNarraCatCommandFile } from '../narracat-command.ts'
 
 export interface RecoverWritePathInput {
@@ -84,7 +85,7 @@ export async function buildRecoverWriteRunPlan(input: RecoverWritePathInput): Pr
   return {
     ok: true,
     plan: {
-      prompt: resolved.prompt,
+      prompt: resolved.prompt + continuousWritingInstruction(request.skipChapterConfirmation),
       options,
       sessionContext,
       projectUpdate: {

@@ -13,6 +13,7 @@ import type {
   AgentThreadSnapshotV1,
 } from './agent'
 import type { AgentRunRequest, AgentRunStarted } from './agent-run'
+import type { ContinuousWritingInput, ContinuousWritingPlan } from './continuous-writing'
 import type {
   CorpusHealthProbeResult,
   EmbeddingHealthProbeResult,
@@ -579,6 +580,8 @@ export interface ElectronApi {
   resetReferenceWorks: (projectPath: string) => Promise<ReferenceWorksSummary>
   selectDirectory: () => Promise<string | null>
   startAgentRun: (request: AgentRunRequest) => Promise<AgentRunStarted>
+  getContinuousWriting: (input: { projectPath: string }) => Promise<ContinuousWritingPlan | null>
+  updateContinuousWriting: (input: ContinuousWritingInput) => Promise<ContinuousWritingPlan>
   cancelAgentRun: (input: { runId: string; requestId: string }) => Promise<{ cancelled: boolean }>
   answerAgentQuestion: (answer: {
     requestId: string

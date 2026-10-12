@@ -19,6 +19,7 @@ export interface AgentRunRequest {
   engineContext?: boolean
   projectPath?: string
   selectedChapter?: number
+  skipChapterConfirmation?: boolean
   target?: AgentRunTarget
 }
 
