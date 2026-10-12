@@ -1,5 +1,28 @@
 # Shared agent output guidance
 
+On 2026-10-12, the installed 4.0.190 App revised chapter 4's structured outline
+and rewrote its manuscript with the configured model. The actual main session
+read the current craft source, and writer dispatches carried chapter-specific
+instructions. Book voice and style switches remained disabled. The author file
+comparison found changes only in chapter 4's JSON outline and manuscript;
+existing outline Markdown remains protected and contains the old text.
+
+The final local revision passed continuity review and updated its summary,
+facts, receipt, and progress through NovelMemory tools. Progress reached chapter
+4 and 7671 total words. The review and receipt count 1623 words, despite the
+writer's estimate of 1936. The manuscript contract check skipped validation
+because the writer had used the formal path rather than staging. This output
+is below the requested range. Prose hygiene checks also passed while abstract
+phrases and unsupported threshold language remained. These checks do not prove
+readability or full compliance with the author's wording requirements.
+
+Do not use this run as a claim that prompt changes remove all formulaic prose.
+Future follow-up should validate the formal manuscript's actual length and
+sentence meaning before committing completion. A pre-existing chapter 3 date
+conflict remains outside this chapter-only task: its October 8 credit timestamp
+does not match the October 7 update window. The backup is under
+`~/Library/Application Support/NarraCat-install-backups/20261012-090253-rewrite-ch4/`.
+
 The engine contract `docs/contracts/agent-output-guidance.md` defines plain
 language for author dialogue, outline fields, setting documents, briefs, reviews,
 and reports. It also defines the boundary for fiction and marked draft excerpts.
