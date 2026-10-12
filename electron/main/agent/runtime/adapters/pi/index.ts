@@ -105,6 +105,7 @@ async function buildPiRunOptions(
     writerSettings.bookPersonaEnabled && args.loadNarraCatRuntime ? '书级声音卡在读取上下文时从当前源文件装载。写作前重新读取本章上下文；声音卡更新后，先重建上下文与任务书，不沿用历史写法。' : null,
     !writerSettings.bookPersonaEnabled ? '本书已关闭书级声音卡。上下文包的声音卡已在读取时移除，不得从历史任务书或会话恢复该声音卡。' : null,
     !writerSettings.bookStyleEnabled ? '本书已关闭书级文风。上下文包的文风指令与样章示例已在读取时移除，不得从历史任务书或会话恢复这些写法要求。' : null,
+    writerSettings.craftLibraryEnabled && args.loadNarraCatRuntime ? '本书已启用网文写作手艺。组装写作或重写任务书前，读取当前 Agent Core 的 skills/novel-web-craft/SKILL.md，选择与本章有关的 2-3 条并转成具体写法要求。选中的写法参考关闭不影响本素材库；上下文包没有 craft_pack_hints 也不表示素材库关闭。不要把其他来源的关闭状态扩展到本素材库。' : null,
     !writerSettings.craftLibraryEnabled ? '本书已关闭网文写作手艺。跳过 novel-web-craft/SKILL.md，不读取、不提炼其原则到任务书，不从历史任务书或会话恢复；其余来源按各自开关处理。' : null,
     !writerSettings.craftReferencesEnabled ? '本书已关闭选中的写法参考。跳过 craft_pack_hints 及其参考文件，不把能力包中的写法要求提炼到任务书，不从历史任务书或会话恢复；书级声音卡按其开关处理。' : null,
   ].filter(Boolean).join('\n')

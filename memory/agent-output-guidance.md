@@ -1,5 +1,14 @@
 # Shared agent output guidance
 
+The first installed 4.0.191 rewrite reached brief assembly, but the main agent
+mistook disabled selected references for a disabled craft library. The library
+was enabled in the saved settings. It did not read the craft source and copied
+unclear wording from the rejected manuscript into the brief. The run was stopped
+before it wrote a new manuscript. Chapter 4 memory is rolled back and its rewrite
+checkpoint remains at step 2. Engine 4.0.192 adds an explicit enabled-library
+policy to main and dispatched sessions and separates both sources in brief
+assembly. The four source combinations are covered by regression tests.
+
 Engine 4.0.191 fixes the formal-path contract bypass for active write and rewrite
 checkpoints. Explicit preflight checks both paths and returns the measured count;
 missing files fail. Author sync outside generation remains unaffected. App write

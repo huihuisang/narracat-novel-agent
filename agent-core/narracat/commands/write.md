@@ -81,7 +81,7 @@ allowed-tools: [Agent, TaskCreate, TaskUpdate, Read, Write, Edit, Glob, AskUserQ
 
 主会话亲自执行（不派发）：
 
-1. Read {pack_path}。再 Read `${CLAUDE_PLUGIN_ROOT}/skills/novel-web-craft/SKILL.md`（写法素材库）；包里有 `craft_pack_hints` 时逐个 Read 其 reference_path，与本章故事线或场景意图不符的 pack 丢弃，并记一行丢弃理由留到完成输出。
+1. Read {pack_path}。按网文写作手艺的独立开关，再 Read `${CLAUDE_PLUGIN_ROOT}/skills/novel-web-craft/SKILL.md`（写法素材库）。选中的写法参考关闭、包里没有 `craft_pack_hints`，都不表示素材库关闭；不根据缺少参考条目推断其他来源的状态。包里有 `craft_pack_hints` 时逐个 Read 其 reference_path，与本章故事线或场景意图不符的 pack 丢弃，并记一行丢弃理由留到完成输出。
 2. 补齐包内缺口。补查结果只写进任务书，不回写包：
    - 包里有 `characters_without_cards` 时**逐个**按条目上的 `character_uid` 调 novel_character_state 补查，把状态翻成人话补进任务书第三段。这些是本章出场、但状态卡没随包给出的角色（预算裁掉或尚无记录）——写手只读任务书，这一步不补，第三段就少人，写手只能自己编。
    - 其余缺口（场景涉及的旧事件只有一句摘要等）用 novel_query / novel_character_state 补查。

@@ -162,6 +162,8 @@ test('each craft source combination reaches the main agent and dispatched writer
         expect(delivered.includes('craft_pack_hints')).toBe(craftReferencesEnabled)
         for (const value of ['Keep voice', 'Keep style', 'Keep plot']) expect(delivered).toContain(value)
         expect((session.systemPromptAppendix ?? '').includes('已关闭网文写作手艺')).toBe(!craftLibraryEnabled)
+        expect((session.systemPromptAppendix ?? '').includes('已启用网文写作手艺')).toBe(craftLibraryEnabled)
+        if (craftLibraryEnabled) expect(session.systemPromptAppendix).toContain('选中的写法参考关闭不影响本素材库')
         expect((session.systemPromptAppendix ?? '').includes('已关闭选中的写法参考')).toBe(!craftReferencesEnabled)
       }
     }
