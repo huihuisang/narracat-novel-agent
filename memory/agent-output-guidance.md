@@ -1,24 +1,35 @@
 # Shared agent output guidance
 
+Installed output review found that both the write command and reviewer explicitly
+limited re-review to earlier findings. Engine 4.0.194 removes this restriction:
+review the final whole chapter and use prior findings as a focus list. New issues
+remain reportable, and the single targeted-repair limit still applies. The source
+contract is covered by a regression test; 3921 App tests and OPS checks pass.
+Packaging and installation remain pending. The chapter 4 revision running in
+4.0.193 has the same full-review requirement in its author request.
+
 The 4.0.192 continuation read the craft source and rebuilt its brief, but the
 builder returned the existing formal manuscript as its output path. The writer
 dispatch followed that path despite the runtime staging instruction. Engine
 4.0.193 adds `draft_path` to the builder response. Write and rewrite commands
 use it for generation; `manuscript_path` retains its existing read semantics.
 Tests cover a new chapter and a chapter with a formal manuscript. The current
-run is allowed to finish with the formal contract gate; its original manuscript
-is backed up. Do not replace the running App mid-generation.
+run finished with the formal contract gate; its original manuscript is backed
+up. Do not replace a running App mid-generation.
 
 The 4.0.192 draft measured 1869 words and 1872 after the cold revision. Formal
 preflight now checks its real count. Review returned a continuity blocker for
 the Friday server joke and a readability note for an incorrect character count.
 The parent combined both in a targeted writer task; the revised file is 1861
-words and re-review is running. Direct reading still found the premature rumor
+words and re-review passed before memory completion. Direct reading still found the premature rumor
 forwarding request, implausible water dialogue, and medication fields in one
 speech. The reviewer incorrectly claimed the forwarding request was not sent.
 Keep these for one combined follow-up revision, not repeated single-sentence
-review cycles. Mac is locked and desktop operations require the author to unlock.
-The 4.0.193 package is signed and verified but not installed yet.
+review cycles. The signed 4.0.193 App is now installed, and all 3214 entries match
+the package. The backup is `20261012-141622-revision-193`. A combined chapter 4
+revision has started in the installed App; final prose and full review remain
+pending. The existing model, author switches, outlines, and other chapters are
+outside this revision.
 
 The first installed 4.0.191 rewrite reached brief assembly, but the main agent
 mistook disabled selected references for a disabled craft library. The library

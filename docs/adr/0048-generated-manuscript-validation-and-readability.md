@@ -27,7 +27,9 @@ sentence meaning and readability. The final report overstated both results.
 - Review issues can carry an optional `continuity` or `readability` category.
   Confirmed factual or semantic errors remain blockers. Readability advice is
   a note and triggers at most one targeted revision in a writing workflow.
-  The final review follows all edits. Remaining notes are reported to the author.
+  The final review follows all edits and checks the whole chapter. Earlier
+  findings guide attention but do not limit review to repaired sentences.
+  Remaining notes are reported to the author; the single-revision limit remains.
 - Briefs describe facts and scene priorities without prewriting decorative
   narration or forcing several required facts into one speech.
 

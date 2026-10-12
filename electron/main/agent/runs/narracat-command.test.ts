@@ -11,6 +11,15 @@ describe('NarraCat command run resolver', () => {
   const readCommandFile = (_pluginPath: string, commandName: string) =>
     `---\ndescription: ${commandName}\n---\n执行 ${commandName} 流程，读取 $ARGUMENTS 和 \${CLAUDE_PLUGIN_ROOT}/templates。`
 
+  test('delivers a full-chapter review after targeted repairs', async () => {
+    const source = await readFile(join(process.cwd(), 'agent-core/narracat/commands/write.md'), 'utf-8')
+    const reviewer = await readFile(join(process.cwd(), 'agent-core/narracat/agents/continuity-editor.md'), 'utf-8')
+    expect(source).toContain('通读最后修改的全章')
+    expect(source).not.toContain('只复验下列已修复问题')
+    expect(reviewer).toContain('按完整工作方式重新检查全章')
+    expect(reviewer).not.toContain('不重查全文')
+  })
+
   test('delivers the rewrite brief, staging path, and readability repair route without a formal-path generation instruction', async () => {
     const source = await readFile(join(process.cwd(), 'agent-core/narracat/commands/rewrite.md'), 'utf-8')
     const resolved = resolveNarraCatCommandRun(
