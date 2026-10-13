@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, test } from 'bun:test'
 
@@ -22,6 +22,19 @@ async function makeProject(state: NovelProjectFixtureState): Promise<string> {
 describe('resolveWriteNextRun', () => {
   beforeAll(async () => {
     pluginPath = await createNarraCatPluginFixture('narracat-write-next-plugin-')
+  })
+
+  test('delivers brief translation and deletion-first cold revision through the write command', async () => {
+    const source = await readFile(join(process.cwd(), 'agent-core/narracat/commands/write.md'), 'utf-8')
+    const projectPath = await makeProject('outlined')
+    const resolved = await resolveWriteNextRun(
+      { projectPath, userPrompt: 'Write the next chapter.' },
+      { pluginPath, readCommandFile: () => source },
+    )
+    expect(resolved.prompt).toContain('定位、主题或道德评语转成要呈现的处境与选择')
+    expect(resolved.prompt).toContain('执行写手的「叙述自检」')
+    expect(resolved.prompt).toContain('不换成另一句感慨，也不补无意义动作')
+    expect(resolved.prompt).toContain('先判断是否需要保留，再决定删去或把对象、结果写清')
   })
 
   test('resolves the first planned chapter for a ready project', async () => {

@@ -10,6 +10,32 @@ const roots: string[] = []
 afterEach(async () => { await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true }))) })
 
 describe('shared agent output guidance', () => {
+  test('writer self-check survives custom and disabled personas in runtime definitions', async () => {
+    const core = join(process.cwd(), 'agent-core/narracat')
+    for (const text of ['Use a dry narrator.', '']) {
+      const overrides = { 'writer-persona': { text, baseText: '', baseEngineVersion: '', updatedAt: '' } }
+      const assembled = await assembleAgentSkills({ agentCorePath: core, agentIds: ['chapter-writer'], proseOverrides: overrides })
+      const definitions = await resolveEngineAgentDefinitions({ agentCorePath: core, overrides: assembled })
+      const prompt = definitions['chapter-writer'].prompt
+      expect(prompt).toContain('## 叙述自检（热写与冷改都执行）')
+      expect(prompt).toContain('删除后不影响理解，也不减少新的顾虑、决定或后果')
+      expect(prompt).toContain('不要为了替换总结，补造动作、对白或身体反应')
+      expect(prompt).toContain('简写还原成谁做了什么、结果怎样')
+      expect(prompt).toContain('不能为凑对照句补出未经确认的另一半')
+      expect(prompt).toContain('有效的概述、幽默、短句和直接心理描写可以保留')
+    }
+  })
+
+  test('reviewer reports redundant conclusions and unclear shorthand as concrete notes', async () => {
+    const parsed = await parseAgentFile(join(process.cwd(), 'agent-core/narracat'), 'continuity-editor')
+    expect(parsed?.prompt).toContain('删去后不影响理解的重复结论')
+    expect(parsed?.prompt).toContain('记录、对白和心理中的简写也要检查')
+    expect(parsed?.prompt).toContain('不能把“对照很有力”当成证据')
+    expect(parsed?.prompt).toContain('表达问题用 readability note')
+    expect(parsed?.prompt).toContain('没有发现客观错误或表达问题时，才提交空 issues')
+    expect(parsed?.prompt).not.toContain('没有发现错误就提交空 issues')
+  })
+
   test('all default agents receive plain planning language with a fiction boundary', async () => {
     for (const agentId of NARRACAT_ENGINE_AGENT_IDS) {
       const parsed = await parseAgentFile(join(process.cwd(), 'agent-core/narracat'), agentId)
