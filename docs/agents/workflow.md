@@ -21,6 +21,7 @@ bun --no-cache run ops:status
 | 品牌资产 / Logo / 插图 | `docs/design.md`、`src/components/brand/README.md`、相关页面实现 | 只通过 `BrandMark` / `BrandLockup` / `BrandIllustration` 入口使用；不在页面直接 import 原始品牌 PNG | 行为或治理变化同步 `progress.md`；长期规则写回 `docs/design.md` |
 | 拆分任务 / 创建 issues | `docs/agents/issue-workflow.md`、`progress.md`；UI / 设计类 issue 读 `docs/agents/design-handoff.md` | 按垂直切片创建 GitHub issues，并标注优先级、类型、状态、执行模式；有视觉资产时写清 Design Assets / References | `progress.md` 只保留摘要 |
 | 代码实现 | 相关源码、测试、计划 | 小垂直切片；行为变更优先补测试 | 完成有意义切片后更新 `progress.md` |
+| 本地提交或已获授权的推送 | `AGENTS.md` | 验证后只在本地提交本次改动。仅在用户明确授权推送本次改动时才同步并推送对应分支 | 只记录实际结果 |
 | 验证 / 提交前检查 | `docs/agents/verification.md` | 运行 `ops:check` 和匹配验证命令 | 不需要为了验证本身更新进度 |
 | 暂停 / 交接 | `docs/agents/handoff.md` | 按模板写清分支、改动、验证、风险、下一步 | 可同步更新 `progress.md` 的 Blockers |
 | 长期架构或产品边界决策 | `CONTEXT.md`、相关 ADR | 写新的 ADR 或更新已有 ADR | 如影响当前阶段，同步更新 `progress.md` |
